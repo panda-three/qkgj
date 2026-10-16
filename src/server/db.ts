@@ -1,45 +1,110 @@
 import { PGlite } from '@electric-sql/pglite';
-import { mkdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { Pool } from 'pg';
+import { DDL } from '../../scripts/ddl';
+import { seed } from '../../scripts/seed-data';
 
 /**
- * 数据库访问层（PGlite 方案）
+ * 数据库访问层（自适应双驱动）
  *
- * 为什么用 PGlite 而不是本机 PostgreSQL：
- * · brew install 被沙箱锁目录策略拦截，无法完成
- * · Postgres.app 的 DMG 从 GitHub 下载被限速到 8KB/s
- * · PGlite 走 npm 源，零系统权限、零外部下载
+ * 背景：部署到 Vercel Serverless 后，函数目录 /var/task 是只读文件系统，
+ * PGlite 无法写入本地数据文件（EROFS: read-only file system, mkdir '/var/task/.pglite'）。
  *
- * PGlite 是 PostgreSQL 的 WASM 构建，支持标准语法：
- * 部分唯一索引、JSONB、FILTER 聚合、CTE、子查询。
- * 唯一不支持的是 `SELECT ... FOR UPDATE` 行锁，
- * 因此并发控制统一改用：
- *   1. 条件更新的原子性（UPDATE ... WHERE owner_id IS NULL RETURNING）
- *   2. version 字段乐观锁
+ * 因此运行时按环境变量自动切换：
+ * · 配置了 DATABASE_URL → 连接托管 PostgreSQL（生产推荐，数据持久化）
+ * · 未配置 DATABASE_URL → PGlite 内存模式（演示可用，实例冷启动后重置为演示数据）
  *
- * 若将来切换到标准 PostgreSQL，只需改这一层的实现，
- * 上层 services 的调用方式完全不变。
+ * 首次使用时自动建表并写入演示数据（幂等：CREATE TABLE IF NOT EXISTS + ON CONFLICT DO NOTHING）。
+ * 上层 services 只依赖 exec / query / transaction 等导出接口，切换驱动无需改动任何调用方。
  */
 
-const DATA_DIR = resolve(process.cwd(), '.pglite');
+const DATABASE_URL = process.env.DATABASE_URL;
+
+/** 远程 PostgreSQL 连接池（惰性创建） */
+let remotePool: Pool | null = null;
 
 declare global {
   // eslint-disable-next-line no-var
-  var __qkgjDb: PGlite | undefined;
+  var __qkgjDb: DbLike | undefined;
+  // eslint-disable-next-line no-var
+  var __qkgjInit: Promise<void> | undefined;
 }
 
-export function getDb(): PGlite {
-  if (globalThis.__qkgjDb) return globalThis.__qkgjDb;
+/** 统一的 SQL 执行接口（PGlite 与 pg 兼容） */
+type DbLike = {
+  query<T>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>;
+  exec(sql: string): Promise<unknown>;
+  waitReady: Promise<unknown>;
+  close(): Promise<void>;
+};
 
-  const instance = new PGlite(DATA_DIR);
-  globalThis.__qkgjDb = instance;
-  return instance;
+function isRemote(): boolean {
+  return DATABASE_URL != null && DATABASE_URL !== '';
+}
+
+/** 首次使用时自动建表 + 演示数据（幂等），通过 waitReady getter 惰性触发 */
+function ensureSchema(): Promise<void> {
+  if (!globalThis.__qkgjInit) {
+    globalThis.__qkgjInit = (async () => {
+      const db = getDb();
+      await db.exec(DDL);
+      await seed(db);
+    })().catch((e) => {
+      globalThis.__qkgjInit = undefined;
+      throw e;
+    });
+  }
+  return globalThis.__qkgjInit;
+}
+
+/** 托管 PostgreSQL 连接（惰性创建） */
+function getPoolWrapper(): DbLike {
+  if (!globalThis.__qkgjDb) {
+    remotePool = new Pool({ connectionString: DATABASE_URL!, max: 1 });
+    let ready: Promise<unknown> | null = null;
+    globalThis.__qkgjDb = {
+      query: async <T,>(sql: string, params: unknown[] = []) => {
+        const result = await remotePool!.query(sql, params as never);
+        return result as { rows: T[] };
+      },
+      exec: (sql) => remotePool!.query(sql),
+      get waitReady() {
+        if (!ready) ready = ensureSchema();
+        return ready;
+      },
+      close: () => remotePool!.end(),
+    };
+  }
+  return globalThis.__qkgjDb;
+}
+
+/** PGlite 内存模式（惰性创建，不写磁盘） */
+function getPgliteWrapper(): DbLike {
+  if (!globalThis.__qkgjDb) {
+    const instance = new PGlite();
+    let ready: Promise<unknown> | null = null;
+    globalThis.__qkgjDb = {
+      query: <T,>(sql: string, params: unknown[] = []) =>
+        instance.query<T>(sql, params).then((r) => ({ rows: r.rows })),
+      exec: (sql) => instance.exec(sql),
+      get waitReady() {
+        if (!ready) ready = ensureSchema().then(() => instance.waitReady);
+        return ready;
+      },
+      close: () => instance.close(),
+    };
+  }
+  return globalThis.__qkgjDb;
+}
+
+/** 获取数据库连接。返回包装对象，query/exec/waitReady/close 与 PGlite 保持一致 */
+export function getDb(): DbLike {
+  return isRemote() ? getPoolWrapper() : getPgliteWrapper();
 }
 
 /** 执行建表 / 批量 SQL */
 export async function exec(sql: string): Promise<void> {
+  await ensureSchema();
   const db = getDb();
-  await db.waitReady;
   await db.exec(sql);
 }
 
@@ -48,8 +113,8 @@ export async function query<T = Record<string, unknown>>(
   sql: string,
   params: unknown[] = [],
 ): Promise<T[]> {
+  await ensureSchema();
   const db = getDb();
-  await db.waitReady;
   const result = await db.query<T>(sql, params);
   return result.rows;
 }
@@ -73,8 +138,25 @@ export async function queryScalar<T>(sql: string, params: unknown[] = []): Promi
 
 /** 事务包裹。原子操作必须走这里，任一失败整体回滚 */
 export async function transaction<T>(fn: () => Promise<T>): Promise<T> {
+  await ensureSchema();
+
+  if (isRemote()) {
+    // pg：从连接池取出专用连接，BEGIN/COMMIT/ROLLBACK
+    const client = await remotePool!.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await fn();
+      await client.query('COMMIT');
+      return result;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
   const db = getDb();
-  await db.waitReady;
   await db.exec('BEGIN');
   try {
     const result = await fn();

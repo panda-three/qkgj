@@ -1,0 +1,10 @@
+{
+  "name": "server-only",
+  "version": "0.0.1",
+  "description": "Local empty shim for the Next.js server-only marker package (used for local script runs; Next.js build replaces this package with an empty module anyway)",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  }
+}
