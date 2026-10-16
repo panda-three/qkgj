@@ -162,13 +162,13 @@ export async function seed(db: any): Promise<void> {
     // 状态变更日志（看板统计依据）
     await q(
       `INSERT INTO "StatusChangeLog" ("id","bizType","bizId","fromStatus","toStatus","action","changedById","changedAt")
-       VALUES ($1,'LEAD',$2,NULL,'PENDING','CREATE',$3,$4)`,
+       VALUES ($1,'LEAD',$2,NULL,'PENDING','CREATE',$3,$4) ON CONFLICT ("id") DO NOTHING`,
       [`scl-l${i}-1`, id, ownerId ?? 'u-1', createdAt],
     );
     if (status !== 'PENDING') {
       await q(
         `INSERT INTO "StatusChangeLog" ("id","bizType","bizId","fromStatus","toStatus","action","changedById","changedAt")
-         VALUES ($1,'LEAD',$2,'PENDING',$3,$4,$5,$6)`,
+         VALUES ($1,'LEAD',$2,'PENDING',$3,$4,$5,$6) ON CONFLICT ("id") DO NOTHING`,
         [`scl-l${i}-2`, id, status, status === 'FOLLOWING' ? 'ASSIGN' : status, ownerId ?? 'u-1', createdAt],
       );
     }
@@ -178,7 +178,7 @@ export async function seed(db: any): Promise<void> {
     if (status === 'CONVERTED') {
       await q(
         `INSERT INTO "StatusChangeLog" ("id","bizType","bizId","fromStatus","toStatus","action","remark","changedById","changedAt")
-         VALUES ($1,'LEAD',$2,'FOLLOWING','CONVERTED','CONVERT_LEAD','种子数据：已转为商机',$3,$4)`,
+         VALUES ($1,'LEAD',$2,'FOLLOWING','CONVERTED','CONVERT_LEAD','种子数据：已转为商机',$3,$4) ON CONFLICT ("id") DO NOTHING`,
         [`scl-l${i}-3`, id, ownerId ?? 'u-1', createdAt],
       );
     }
@@ -186,7 +186,7 @@ export async function seed(db: any): Promise<void> {
     if (ownerId) {
       await q(
         `INSERT INTO "OwnershipHistory" ("id","bizType","bizId","toOwnerId","action","changedById","changedAt")
-         VALUES ($1,'LEAD',$2,$3,'ASSIGN','u-2',$4)`,
+         VALUES ($1,'LEAD',$2,$3,'ASSIGN','u-2',$4) ON CONFLICT ("id") DO NOTHING`,
         [`own-l${i}`, id, ownerId, createdAt],
       );
     }
@@ -194,7 +194,7 @@ export async function seed(db: any): Promise<void> {
     for (let k = 0; k < fc; k += 1) {
       await q(
         `INSERT INTO "FollowUp" ("id","bizType","bizId","method","result","content","nextFollowAt","createdById","createdAt")
-         VALUES ($1,'LEAD',$2,$3,$4,$5,$6,$7,$8)`,
+         VALUES ($1,'LEAD',$2,$3,$4,$5,$6,$7,$8) ON CONFLICT ("id") DO NOTHING`,
         [
           `fu-l${i}-${k}`, id, k % 2 === 0 ? 'PHONE' : 'WECHAT',
           ['INTERESTED', 'WECHAT_ADDED', 'OBSERVE'][k % 3],
@@ -241,20 +241,20 @@ export async function seed(db: any): Promise<void> {
 
     await q(
       `INSERT INTO "StatusChangeLog" ("id","bizType","bizId","fromStatus","toStatus","action","changedById","changedAt")
-       VALUES ($1,'OPPORTUNITY',$2,NULL,'FOLLOWING','CREATE',$3,$4)`,
+       VALUES ($1,'OPPORTUNITY',$2,NULL,'FOLLOWING','CREATE',$3,$4) ON CONFLICT ("id") DO NOTHING`,
       [`scl-o${i}-1`, id, ownerId, createdAt],
     );
     if (stage !== 'FOLLOWING') {
       await q(
         `INSERT INTO "StatusChangeLog" ("id","bizType","bizId","fromStatus","toStatus","action","changedById","changedAt")
-         VALUES ($1,'OPPORTUNITY',$2,'FOLLOWING',$3,$4,$5,$6)`,
+         VALUES ($1,'OPPORTUNITY',$2,'FOLLOWING',$3,$4,$5,$6) ON CONFLICT ("id") DO NOTHING`,
         [`scl-o${i}-2`, id, stage, stage, ownerId, daysAgo(Math.max(0, days - 1))],
       );
     }
 
     await q(
       `INSERT INTO "FollowUp" ("id","bizType","bizId","method","content","nextPlan","createdById","createdAt")
-       VALUES ($1,'OPPORTUNITY',$2,'PHONE',$3,'下次跟进确认意向',$4,$5)`,
+       VALUES ($1,'OPPORTUNITY',$2,'PHONE',$3,'下次跟进确认意向',$4,$5) ON CONFLICT ("id") DO NOTHING`,
       [
         `fu-o${i}`, id,
         `与客户沟通了课程安排与价格方案，${stage === 'NEGOTIATING' ? '客户在对比优惠力度，预计本周内确认' : '客户表示需要再考虑一下'}。`,
@@ -288,13 +288,13 @@ export async function seed(db: any): Promise<void> {
 
     await q(
       `INSERT INTO "StatusChangeLog" ("id","bizType","bizId","fromStatus","toStatus","action","changedById","changedAt")
-       VALUES ($1,'CUSTOMER',$2,NULL,'ACTIVE','CONVERT_CUSTOMER',$3,$4)`,
+       VALUES ($1,'CUSTOMER',$2,NULL,'ACTIVE','CONVERT_CUSTOMER',$3,$4) ON CONFLICT ("id") DO NOTHING`,
       [`scl-cu${i}`, id, ownerId, daysAgo(dealDays)],
     );
 
     await q(
       `INSERT INTO "ServiceRecord" ("id","customerId","type","serviceDate","duration","staffId","content","rating","createdById","createdAt")
-       VALUES ($1,$2,$3,$4,90,$5,$6,5,$5,$7)`,
+       VALUES ($1,$2,$3,$4,90,$5,$6,5,$5,$7) ON CONFLICT ("id") DO NOTHING`,
       [
         `sr-${i}`, id, status === 'COMPLETED' ? 'LESSON' : 'TRIAL', daysAgo(dealDays),
         ownerId, '完成试听课程，讲解了课程大纲与实战案例，客户反馈良好。', daysAgo(dealDays),
