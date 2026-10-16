@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商机管理 · 轻客管家</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .view-pane { display: none; }
+  .view-pane.active { display: block; }
+  .kanban-col-body::-webkit-scrollbar { width: 5px; }
+  .overdue-cell { background: var(--danger-50); border-radius: 4px; padding: 2px 7px; color: var(--danger-700); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main-area">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">商机管理</h1>
+          <p class="page-desc">
+            商机为已确认购买意向的线索 · 阶段停留超阈值自动预警（跟进中 3 天 / 谈判中 7 天）· 赢单为终态不可回退
+          </p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="btnExport">导出</button>
+          <button class="btn btn-primary" id="btnCreateOpp">新建商机</button>
+        </div>
+      </div>
+
+      <!-- 状态统计 -->
+      <div class="stat-grid u-mb-16" style="grid-template-columns:repeat(5,1fr)">
+        <div class="stat-card" onclick="switchView('kanban')">
+          <div class="stat-head"><span class="stat-label">待跟进</span></div>
+          <div class="stat-value"><span class="u-mono">142</span></div>
+          <div class="stat-foot"><span class="u-muted">初始意向确认</span></div>
+        </div>
+        <div class="stat-card is-purple" onclick="switchView('kanban')">
+          <div class="stat-head"><span class="stat-label">跟进中</span></div>
+          <div class="stat-value"><span class="u-mono">126</span></div>
+          <div class="stat-foot"><span class="u-muted">建议停留 ≤ 3 天</span></div>
+        </div>
+        <div class="stat-card is-warning" onclick="switchView('kanban')">
+          <div class="stat-head"><span class="stat-label">谈判中</span></div>
+          <div class="stat-value"><span class="u-mono">42</span></div>
+          <div class="stat-foot"><span class="u-muted">建议停留 ≤ 7 天</span></div>
+        </div>
+        <div class="stat-card is-success" onclick="switchView('list')">
+          <div class="stat-head"><span class="stat-label">已赢单</span></div>
+          <div class="stat-value"><span class="u-mono">118</span></div>
+          <div class="stat-foot"><span class="u-success-text">赢单率 28.2%</span></div>
+        </div>
+        <div class="stat-card is-success" onclick="switchView('list')">
+          <div class="stat-head"><span class="stat-label">已输单</span></div>
+          <div class="stat-value"><span class="u-mono">31</span></div>
+          <div class="stat-foot"><span class="u-muted">近 7 天 6 单</span></div>
+        </div>
+      </div>
+
+      <!-- 筛选 -->
+      <div class="card u-mb-16">
+        <div class="filter-bar">
+          <div class="filter-grid">
+            <div class="filter-item">
+              <span class="filter-label">关键词</span>
+              <div class="search-box u-flex-1">
+                <span class="search-icon" id="kwIcon"></span>
+                <input class="input" id="kwInput" placeholder="商机名称 / 客户 / 手机号">
+              </div>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">阶段</span>
+              <select class="select" id="fStage">
+                <option value="">全部阶段</option>
+                <option>跟进中</option><option>谈判中</option><option>已赢单</option><option>已输单</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">关联课程</span>
+              <select class="select"><option>全部课程</option><option>Python 数据分析</option><option>成人学历提升</option></select>
+            </div>
+            <div class="filter-item" data-min="SALES_MANAGER">
+              <span class="filter-label">归属人</span>
+              <select class="select"><option>全部</option><option>王小雨</option><option>陈思远</option><option>赵磊</option></select>
+            </div>
+            <div class="filter-item" style="grid-column:span 2">
+              <span class="filter-label">金额区间</span>
+              <div class="u-flex u-gap-6 u-flex-1">
+                <input class="input" placeholder="最低">
+                <span class="u-muted-sm">—</span>
+                <input class="input" placeholder="最高">
+              </div>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">超期标记</span>
+              <select class="select"><option value="">全部</option><option>仅看超期</option></select>
+            </div>
+            <div class="filter-item" style="grid-column:span 2">
+              <span class="filter-label">预计成交</span>
+              <select class="select"><option>不限</option><option>本月内</option><option>7 天内</option><option>已逾期</option></select>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">来源渠道</span>
+              <select class="select"><option>全部</option><option>抖音短视频</option><option>百度 SEM</option></select>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary" id="btnSearch">查询</button>
+            <button class="btn" id="btnReset">重置</button>
+            <span class="u-right u-muted-sm">默认按「预计成交日期」升序，超期数据置顶</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 视图切换 + 工具栏 -->
+      <div class="card">
+        <div class="card-head">
+          <div class="u-center u-gap-12">
+            <div class="card-title"><span class="title-bar"></span>商机列表</div>
+            <div class="view-switch" id="viewSwitch">
+              <button class="active" data-view="list"><span data-icon="list" data-size="14"></span>列表视图</button>
+              <button data-view="kanban"><span data-icon="board" data-size="14"></span>阶段看板</button>
+            </div>
+          </div>
+          <div class="u-center u-gap-8">
+            <button class="btn btn-sm" id="btnColConfig">列配置</button>
+            <button class="btn btn-sm" data-min="SALES_MANAGER" onclick="toast('info','原型演示：批量分配弹窗')">批量分配</button>
+          </div>
+        </div>
+
+        <div class="batch-bar u-hidden" data-batch-bar>
+          <span>已选择 <strong data-batch-count>0</strong> 个商机</span>
+          <div class="u-right u-center u-gap-8">
+            <button class="btn btn-sm btn-primary" onclick="toast('info','原型演示：批量分配')">批量分配</button>
+            <button class="btn btn-sm" onclick="openPoolBatch()">批量踢回公海</button>
+            <button class="btn btn-sm" onclick="toast('success','导出任务已创建')">批量导出</button>
+            <button class="btn btn-sm btn-ghost" onclick="cancelBatch()">取消选择</button>
+          </div>
+        </div>
+
+        <!-- 列表视图 -->
+        <div class="view-pane active" id="paneList">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th class="col-check"><label class="checkbox"><input type="checkbox" data-check-all><span class="box"></span></label></th>
+                  <th>商机名称 / 客户</th>
+                  <th data-col="course">关联课程</th>
+                  <th data-col="amount">商机金额</th>
+                  <th data-col="stage">阶段</th>
+                  <th data-col="owner" data-min="SALES_MANAGER">归属人</th>
+                  <th class="sortable" data-col="date">预计成交日<span class="sort-icon"></span></th>
+                  <th data-col="stay">阶段停留</th>
+                  <th data-col="next">下次动作</th>
+                  <th data-col="from">来源线索</th>
+                  <th class="col-actions">操作</th>
+                </tr>
+              </thead>
+              <tbody id="oppBody"></tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span class="page-info">第 1 - 20 条，共 419 条</span>
+            <div class="page-nav">
+              <button class="page-btn" disabled>‹</button>
+              <button class="page-btn active">1</button>
+              <button class="page-btn">2</button>
+              <button class="page-btn">3</button>
+              <span class="page-ellipsis">…</span>
+              <button class="page-btn">21</button>
+              <button class="page-btn">›</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 看板视图 -->
+        <div class="view-pane" id="paneKanban">
+          <div class="card-body">
+            <div class="kanban" id="kanban"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+initPage({
+  key: 'opportunity',
+  breadcrumb: [{ text: '首页', href: 'dashboard.html' }, { text: '商机管理' }]
+});
+document.getElementById('kwIcon').innerHTML = icon('search', 15);
+document.querySelectorAll('th.sortable .sort-icon').forEach(el => el.innerHTML = icon('arrowUp', 12));
+
+/* ============ 数据 ============ */
+const OPPS = [
+  { id: 1, name: '林雅琴-Python数据分析', cust: '林雅琴', phone: '13812345678', course: 'Python 数据分析训练营', amount: 6800, stage: 'NEGOTIATING', owner: '王小雨', dept: '华东·一组', date: '10-24', stay: 9, overdue: true, next: '确认分期方案', from: 'LD2026101001', cls: 'avatar-c' },
+  { id: 2, name: '苏婉清-专升本', cust: '苏婉清', phone: '18645678901', course: '成人学历提升 · 专升本', amount: 4200, stage: 'FOLLOWING', owner: '陈思远', dept: '华东·一组', date: '10-28', stay: 2, overdue: false, next: '发送学信网截图', from: 'LD2026101004', cls: 'avatar-a' },
+  { id: 3, name: '何俊豪-数学思维', cust: '何俊豪', phone: '15034567890', course: '青少年数学思维提升', amount: 3800, stage: 'FOLLOWING', owner: '王小雨', dept: '华东·一组', date: '11-02', stay: 1, overdue: false, next: '试听邀约', from: 'LD2026101003', cls: 'avatar-d' },
+  { id: 4, name: '冯雅琪-专升本', cust: '冯雅琪', phone: '15867890123', course: '成人学历提升 · 专升本', amount: 4200, stage: 'WON', owner: '赵磊', dept: '华东·二组', date: '10-12', stay: 0, overdue: false, next: '转客户', from: 'LD2026101006', cls: 'avatar-f' },
+  { id: 5, name: '曹梦琪-Python训练营', cust: '曹梦琪', phone: '13101234567', course: 'Python 数据分析训练营', amount: 6800, stage: 'FOLLOWING', owner: '孙悦', dept: '华北·一组', date: '10-30', stay: 5, overdue: true, next: '二次沟通价格', from: 'LD2026101011', cls: 'avatar-e' },
+  { id: 6, name: '徐嘉宁-演讲表达', cust: '徐嘉宁', phone: '18890123456', course: '职场演讲表达课', amount: 2980, stage: 'LOST', owner: '王小雨', dept: '华东·一组', date: '10-18', stay: 0, overdue: false, next: '—', from: 'LD2026101009', cls: 'avatar-c' },
+  { id: 7, name: '赵梓涵-Python训练营', cust: '赵梓涵', phone: '13712349876', course: 'Python 数据分析训练营', amount: 6800, stage: 'NEGOTIATING', owner: '陈思远', dept: '华东·一组', date: '10-22', stay: 4, overdue: false, next: '合同条款确认', from: 'LD2026101021', cls: 'avatar-a' },
+  { id: 8, name: '周子墨-编程启蒙', cust: '周子墨', phone: '15988776655', course: '少儿编程启蒙班', amount: 5600, stage: 'FOLLOWING', owner: '赵磊', dept: '华东·二组', date: '11-05', stay: 3, overdue: true, next: '安排试听', from: 'LD2026101022', cls: 'avatar-d' },
+];
+
+const STAGES = [
+  { key: 'FOLLOWING', name: '跟进中', color: '#3a63f0' },
+  { key: 'NEGOTIATING', name: '谈判中', color: '#f59e0b' },
+  { key: 'WON', name: '已赢单', color: '#10b981' },
+  { key: 'LOST', name: '已输单', color: '#ef4444' },
+];
+
+/* ============ 列表渲染 ============ */
+function renderList() {
+  const body = document.getElementById('oppBody');
+  const stage = document.getElementById('fStage').value;
+  const kw = document.getElementById('kwInput').value.trim();
+  let list = OPPS.slice();
+  if (stage) list = list.filter(o => {
+    const map = { 跟进中: 'FOLLOWING', 谈判中: 'NEGOTIATING', 已赢单: 'WON', 已输单: 'LOST' };
+    return o.stage === map[stage];
+  });
+  if (kw) list = list.filter(o => o.name.includes(kw) || o.cust.includes(kw) || o.phone.includes(kw));
+  // 超期置顶
+  list.sort((a, b) => (b.overdue ? 1 : 0) - (a.overdue ? 1 : 0));
+
+  if (!list.length) {
+    body.innerHTML = `<tr><td colspan="11"><div class="empty-state">
+      <div class="empty-icon">${icon('inbox', 26)}</div>
+      <div class="empty-title">没有符合条件的商机</div>
+      <div class="empty-desc">试试调整筛选条件，或从线索详情页「转为商机」</div></div></td></tr>`;
+    return;
+  }
+
+  body.innerHTML = list.map(o => {
+    const stayCell = o.stage === 'FOLLOWING' || o.stage === 'NEGOTIATING'
+      ? (o.overdue ? `<span class="overdue-cell">${o.stay} 天</span>` : `<span class="u-muted-sm">${o.stay} 天</span>`)
+      : '<span class="u-muted-sm">—</span>';
+    return `<tr class="${o.overdue ? 'row-warning' : ''}">
+      <td class="col-check"><label class="checkbox"><input type="checkbox" data-check-row="${o.id}"><span class="box"></span></label></td>
+      <td>
+        <div class="cell-main">${o.name}</div>
+        <div class="cell-sub masked-phone" data-phone="${o.phone}">
+          <span class="phone-text">${maskPhone(o.phone)}</span>
+          <span class="eye-btn" style="margin-left:4px">${icon('eye', 13)}</span>
+        </div>
+      </td>
+      <td><span class="u-muted-sm">${o.course}</span></td>
+      <td><span class="u-strong u-danger-text u-mono">${money(o.amount)}</span></td>
+      <td>${statusTag(o.stage)}</td>
+      <td data-min="SALES_MANAGER">
+        <div class="user-cell"><span class="avatar avatar-sm ${o.cls}" style="width:20px;height:20px;font-size:10px">${o.owner[0]}</span>${o.owner}</div>
+      </td>
+      <td><span class="u-mono u-muted-sm">${o.date}</span></td>
+      <td>${stayCell}</td>
+      <td><span class="u-muted-sm">${o.next}</span></td>
+      <td><span class="u-link u-mono" style="font-size:12px" onclick="location.href='lead-detail.html'">${o.from}</span></td>
+      <td class="col-actions">
+        <div class="link-actions">
+          <span onclick="location.href='opportunity-detail.html'">详情</span>
+          ${o.stage === 'WON'
+            ? `<span onclick="toast('info','原型演示：转客户')">转客户</span>`
+            : (o.stage === 'LOST'
+              ? `<span class="disabled">推进</span>`
+              : `<span onclick="location.href='opportunity-detail.html#advance'">推进</span>
+                 <span onclick="openPoolBatch()">踢回</span>`)}
+          <span onclick="toast('info','原型演示：更多操作')">更多</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  bindPhoneEyes(body);
+  bindSelectAll(document);
+  applyPerms(body, currentRole());
+}
+renderList();
+
+/* ============ 看板渲染 ============ */
+function renderKanban() {
+  document.getElementById('kanban').innerHTML = STAGES.map(s => {
+    const items = OPPS.filter(o => o.stage === s.key);
+    return `<div class="kanban-col" data-stage="${s.name}">
+      <div class="kanban-col-head">
+        <span class="dot" style="background:${s.color}"></span>
+        <span class="kanban-col-title">${s.name}</span>
+        <span class="badge-count is-muted">${items.length}</span>
+      </div>
+      <div class="kanban-col-body">
+        ${items.map(o => `
+          <div class="kanban-card" draggable="true" onclick="location.href='opportunity-detail.html'">
+            <div class="kanban-card-title">${o.cust}</div>
+            <div class="kanban-card-meta">
+              <span class="u-ellipsis" style="flex:1;min-width:0">${o.course}</span>
+            </div>
+            <div class="kanban-card-meta u-mt-8">
+              <span class="avatar avatar-sm ${o.cls}" style="width:18px;height:18px;font-size:9px">${o.owner[0]}</span>
+              <span>${o.owner}</span>
+              ${o.overdue ? '<span class="tag tag-danger">超期</span>' : ''}
+            </div>
+            <div class="kanban-card-foot">
+              <span class="kanban-amount">${money(o.amount)}</span>
+              <span class="u-muted-sm">${o.date} 成交</span>
+            </div>
+          </div>`).join('') || '<div class="u-muted-sm" style="text-align:center;padding:20px 0;font-size:12px">暂无数据</div>'}
+      </div>
+    </div>`;
+  }).join('');
+  bindKanban(document.getElementById('kanban'));
+}
+renderKanban();
+
+/* ============ 视图切换 ============ */
+function switchView(v) {
+  document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById(v === 'list' ? 'paneList' : 'paneKanban').classList.add('active');
+}
+bindViewSwitch(document.getElementById('viewSwitch'), v => {
+  switchView(v);
+  if (v === 'kanban') toast('info', '提示：阶段看板支持拖拽卡片变更阶段，操作会记录日志');
+});
+
+/* ============ 筛选 ============ */
+document.getElementById('btnSearch').addEventListener('click', () => { renderList(); toast('info', '已按当前条件查询'); });
+document.getElementById('kwInput').addEventListener('keydown', e => { if (e.key === 'Enter') renderList(); });
+document.getElementById('fStage').addEventListener('change', renderList);
+document.getElementById('btnReset').addEventListener('click', () => {
+  document.getElementById('kwInput').value = '';
+  document.getElementById('fStage').value = '';
+  document.querySelectorAll('.filter-grid select').forEach(s => s.selectedIndex = 0);
+  renderList();
+  toast('success', '筛选条件已重置');
+});
+function cancelBatch() {
+  document.querySelectorAll('[data-check-row]').forEach(r => { r.checked = false; r.closest('tr')?.classList.remove('is-selected'); });
+  const all = document.querySelector('[data-check-all]');
+  if (all) all.checked = false;
+  updateBatchBar(document);
+}
+
+/* ============ 新建商机 ============ */
+document.getElementById('btnCreateOpp').addEventListener('click', () => {
+  const isSales = currentRole() === 'SALES';
+  openModal({
+    title: '新建商机',
+    sub: '通常由线索转化而来，此入口用于补录特殊情况',
+    size: 'lg',
+    body: `<div class="form-grid">
+      <div class="field col-span-2">
+        <label class="field-label">商机名称 <span class="req">*</span></label>
+        <input class="input" placeholder="默认格式：客户姓名 + 意向课程">
+      </div>
+      <div class="field"><label class="field-label">客户姓名 <span class="req">*</span></label><input class="input"></div>
+      <div class="field"><label class="field-label">客户手机号 <span class="req">*</span></label><input class="input" maxlength="11"></div>
+      <div class="field col-span-2">
+        <label class="field-label">关联课程 / 活动 <span class="req">*</span></label>
+        <select class="select"><option value="">请选择</option><option>Python 数据分析训练营</option><option>成人学历提升 · 专升本</option></select>
+      </div>
+      <div class="field"><label class="field-label">商机金额 <span class="req">*</span></label><input class="input" type="number" placeholder="> 0"></div>
+      <div class="field"><label class="field-label">预计成交日期 <span class="req">*</span></label><input type="date" class="input"></div>
+      <div class="field"><label class="field-label">商机来源</label><select class="select"><option>抖音短视频</option><option>小红书</option><option>朋友转介绍</option></select></div>
+      <div class="field"><label class="field-label">归属人</label>
+        ${isSales ? `<div class="readonly-value">${icon('lock', 13)} 王小雨（本人）</div>` : `<select class="select"><option value="">不选择</option><option>王小雨</option><option>陈思远</option></select>`}
+      </div>
+      <div class="field col-span-2"><label class="field-label">初始阶段</label><select class="select"><option>待跟进</option><option>跟进中</option></select></div>
+      <div class="field col-span-2"><label class="field-label">商机描述</label><textarea class="textarea" placeholder="补充商机背景"></textarea></div>
+    </div>
+    <div class="alert alert-info u-mt-16">
+      <span class="alert-icon">${icon('info', 16)}</span>
+      <div>建议优先通过<b>线索详情页「转为商机」</b>创建，以保证跟进记录在转化点的分界与双向关联。</div>
+    </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','商机创建成功')">创建商机</button>`,
+  });
+});
+
+/* ============ 列配置 ============ */
+document.getElementById('btnColConfig').addEventListener('click', () => {
+  toast('info', '原型演示：列配置弹窗（与线索列表一致）');
+});
+
+/* ============ 踢回公海 ============ */
+function openPoolBatch() {
+  const ids = getCheckedIds(document.getElementById('oppBody'));
+  openModal({
+    title: '踢回公海池',
+    sub: ids.length ? `已选 ${ids.length} 个商机` : '批量操作',
+    size: 'sm',
+    body: `
+      <div class="field">
+        <label class="field-label">踢回原因 <span class="req">*</span></label>
+        <select class="select" onchange="document.getElementById('oppNoteWrap').classList.toggle('u-hidden', this.value!=='其他')">
+          <option>长期未跟进</option><option>无真实意向</option><option>联系方式失效</option>
+          <option>客户已成交他处</option><option>主动放弃</option><option>离职调岗</option><option>其他</option>
+        </select>
+      </div>
+      <div class="field u-mt-16 u-hidden" id="oppNoteWrap">
+        <label class="field-label">备注 <span class="req">*</span></label>
+        <textarea class="textarea" maxlength="200"></textarea>
+      </div>
+      <div class="alert alert-info u-mt-16">
+        <span class="alert-icon">${icon('info', 16)}</span>
+        <div>踢回后归属人清空，阶段回退至「<b>跟进中</b>」并进入公海，全员可见可领取。阶段停留天数<b>继续累计</b>，不因换人而重置。</div>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','已踢回公海，阶段回退至跟进中')">确认踢回</button>`,
+  });
+}
+document.getElementById('btnExport').addEventListener('click', () => {
+  toast('success', '导出任务已创建，完成后可在通知中心下载（导出行为已记录日志）');
+});
+</script>
+</body>
+</html>

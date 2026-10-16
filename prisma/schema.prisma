@@ -1,0 +1,615 @@
+// ==========================================================================
+// 轻客管家 · 数据模型
+// 设计要点见《开发计划.md》第 2 章
+//
+// 三条不可返工的地基决策：
+// 1. 手机号唯一索引使用「部分唯一索引」，同时满足
+//    BR-L01 手机号唯一 / BR-L03 仅一条有效线索 / 已存在伪线索时允许重录
+// 2. StatusChangeLog 从 Step 2 起每次状态流转都要写，
+//    看板转化率按状态跃迁时间统计（BR-D04），不是 createdAt
+// 3. Dept 用物化路径 path，避免递归查询，便于拼数据权限条件
+// ==========================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/* ==========================================================================
+   1. 组织与权限
+   ========================================================================== */
+
+/// 部门表（树形，path 为物化路径）
+model Dept {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  /// 物化路径，如 /root/sales/east/ ，末位带斜杠，便于 LIKE 前缀匹配
+  path      String   @default("/")
+  parentId  String?
+  leaderId  String?
+  sortNo    Int      @default(0)
+  /// ACTIVE | DISABLED
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent   Dept?  @relation("DeptTree", fields: [parentId], references: [id])
+  children Dept[] @relation("DeptTree")
+  users    User[]
+
+  @@index([parentId, sortNo])
+  @@index([path])
+  @@map("Dept")
+}
+
+/// 账号表。3 个固定角色用枚举，不建角色表
+model User {
+  id           String    @id @default(cuid())
+  employeeNo   String    @unique
+  name         String
+  phone        String?
+  deptId       String
+  /// SUPER_ADMIN | SALES_MANAGER | SALES
+  role         String
+  /// ACTIVE | DISABLED
+  status       String    @default("ACTIVE")
+  passwordHash String
+  /// 首次登录强制改密
+  mustChangePwd Boolean @default(true)
+  /// 登录失败计数（用于连续 5 次锁定 30 分钟）
+  failCount     Int      @default(0)
+  lockedUntil   DateTime?
+  lastLoginAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dept Dept @relation(fields: [deptId], references: [id])
+
+  ownedLeads          Lead[]                @relation("LeadOwner")
+  ownedOpportunities  Opportunity[]         @relation("OppOwner")
+  ownedCustomers      Customer[]            @relation("CustomerOwner")
+  followUps           FollowUp[]
+  serviceRecords      ServiceRecord[]
+  operationLogs       OperationLog[]
+
+  @@index([deptId, role, status])
+  @@map("User")
+}
+
+/// 角色功能权限开关。超管可调整，调整后立即生效
+model RolePerm {
+  id       String @id @default(cuid())
+  role     String
+  /// 权限点标识，如 lead:assign / opp:export
+  permKey  String
+  allowed  Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([role, permKey])
+  @@map("RolePerm")
+}
+
+/// 系统参数（PRD 4.6.5）
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  /// ALL | SUPER_ADMIN
+  scope     String   @default("ALL")
+  desc      String?
+  updatedAt DateTime @updatedAt
+
+  @@map("SystemConfig")
+}
+
+/* ==========================================================================
+   2. 业务主表
+   ========================================================================== */
+
+/// 线索表
+model Lead {
+  id    String  @id @default(cuid())
+  /// 业务编号，如 LD-20261011-0001
+  code  String  @unique
+  name  String
+  phone String
+
+  /// MALE | FEMALE | UNKNOWN
+  gender  String?
+  sourceChannelId String?
+  /// 意向课程/活动，转商机时自动预填
+  intentCourseId  String?
+  /// PENDING | FOLLOWING | PSEUDO | TO_POOL | CONVERTED
+  status  String @default("PENDING")
+  remark  String?
+
+  /// 归属人。为空且状态为 TO_POOL 即在公海
+  ownerId String?
+  /// 部门快照：部门调整后历史数据归属不变
+  deptId  String?
+
+  followCount   Int       @default(0)
+  lastFollowAt  DateTime?
+  nextFollowAt  DateTime?
+  /// 最近一次从公海领取时间，用于 BR-H04 自动回收判定
+  claimedAt     DateTime?
+
+  convertedAt   DateTime?
+  convertedOppId String?  @unique
+  /// 转化耗时（BR-C05）：线索创建 → 商机创建
+  conversionDays Int?
+
+  /// 乐观锁
+  version   Int      @default(0)
+  isDeleted Boolean  @default(false)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner           User?          @relation("LeadOwner", fields: [ownerId], references: [id])
+  sourceChannel   Channel?       @relation(fields: [sourceChannelId], references: [id])
+  intentCourse    Course?        @relation(fields: [intentCourseId], references: [id])
+  convertedOpp    Opportunity?   @relation("LeadToOpp")
+  followUps       FollowUp[]
+  attachments     Attachment[]
+  opportunity     Opportunity[]  @relation("OppSourceLead")
+
+  @@index([ownerId, status, createdAt(sort: Desc)])
+  @@index([deptId, status, createdAt(sort: Desc)])
+  @@index([status, nextFollowAt])
+  @@index([status, claimedAt])
+  @@index([phone])
+  @@index([sourceChannelId])
+  @@map("Lead")
+}
+
+/// 商机表
+model Opportunity {
+  id   String @id @default(cuid())
+  code String @unique
+  name String
+
+  customerName String
+  phone        String
+  courseId     String?
+
+  /// Decimal 转 float：金额不做分位运算，统计用 SUM 即可
+  amount            Float
+  expectedCloseDate DateTime?
+
+  /// FOLLOWING | NEGOTIATING | WON | LOST
+  stage            String    @default("FOLLOWING")
+  /// 阶段进入时间，用于计算阶段停留天数（换人不重置）
+  stageEnteredAt   DateTime  @default(now())
+
+  ownerId String?
+  deptId  String?
+
+  sourceChannelId String?
+  sourceLeadId    String?
+
+  description String?
+  nextAction  String?
+
+  /// 赢单信息
+  wonAt     DateTime?
+  wonAmount Float?
+  wonDate   DateTime?
+  /// 输单信息，必填（BR-O02）
+  lostReason String?
+  lostRemark String?
+
+  version   Int      @default(0)
+  isDeleted Boolean  @default(false)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner         User?         @relation("OppOwner", fields: [ownerId], references: [id])
+  course        Course?       @relation(fields: [courseId], references: [id])
+  sourceChannel Channel?      @relation(fields: [sourceChannelId], references: [id])
+  sourceLead    Lead?         @relation("OppSourceLead", fields: [sourceLeadId], references: [id])
+  /// 转商机时线索侧的反向关联
+  convertedFrom Lead?         @relation("LeadToOpp")
+  customer      Customer?     @relation("OppToCustomer")
+
+  followUps     FollowUp[]
+  amountHistory AmountHistory[]
+  attachments   Attachment[]
+
+  @@index([ownerId, stage])
+  @@index([deptId, stage])
+  @@index([expectedCloseDate])
+  @@index([stageEnteredAt])
+  @@index([sourceLeadId])
+  @@map("Opportunity")
+}
+
+/// 客户表
+model Customer {
+  id   String @id @default(cuid())
+  code String @unique
+  name String
+  /// UNIQUE | FOLLOWING | NEGOTIATING | WON
+  phone String
+
+  /// MALE | FEMALE | UNKNOWN
+  gender  String?
+  courseId String?
+
+  amount   Float
+  dealDate DateTime
+
+  /// ACTIVE | PAUSED | COMPLETED | REFUNDED | LOST
+  status  String @default("ACTIVE")
+
+  ownerId String?
+  deptId  String?
+
+  sourceChannelId String?
+  sourceLeadId    String?
+  sourceOppId     String? @unique
+
+  serviceStartDate  DateTime?
+  serviceExpireDate DateTime?
+  /// 归档后默认不出现在列表（BR-CU04）
+  archivedAt DateTime?
+
+  version   Int      @default(0)
+  isDeleted Boolean  @default(false)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner         User?        @relation("CustomerOwner", fields: [ownerId], references: [id])
+  course        Course?      @relation(fields: [courseId], references: [id])
+  sourceChannel Channel?     @relation(fields: [sourceChannelId], references: [id])
+  sourceOpp     Opportunity? @relation("OppToCustomer", fields: [sourceOppId], references: [id])
+
+  serviceRecords ServiceRecord[]
+  followUps      FollowUp[]
+  attachments    Attachment[]
+
+  @@index([ownerId, status])
+  @@index([deptId, status])
+  @@index([serviceExpireDate])
+  @@index([phone, name])
+  @@map("Customer")
+}
+
+/// 课程表
+model Course {
+  id       String @id @default(cuid())
+  code     String @unique
+  name     String
+  /// K12 | ADULT_EDU | VOCATIONAL | INTEREST
+  category String
+  /// LIVE | RECORDED | OFFLINE | HYBRID
+  mode     String
+
+  price Float
+  cost  Float?
+  /// OFF | ON | REMOVED
+  status String @default("OFF")
+
+  /// 关联咨询师，多选，用于商机分配权限校验（P2）
+  consultantIds String[]
+  description   String?
+  startDate     DateTime?
+  coverIndex    Int      @default(0)
+
+  version   Int      @default(0)
+  isDeleted Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  priceHistory PriceHistory[]
+  leads        Lead[]         @relation(fields: [intentCourseId], references: [id])
+  opportunities Opportunity[]
+  customers    Customer[]
+  activities   Activity[]
+
+  @@map("Course")
+}
+
+/// 活动表（试听/公开课/讲座/训练营）
+model Activity {
+  id   String @id @default(cuid())
+  name String
+  /// TRIAL | OPEN_CLASS | LECTURE | CAMP
+  type   String
+  startAt DateTime
+  endAt   DateTime?
+  location String?
+
+  capacity      Int     @default(0)
+  enrolledCount Int     @default(0)
+  courseId      String?
+  /// 关联渠道，用于核算到课率与转化率
+  channelIds    String[]
+  /// NOT_STARTED | ONGOING | ENDED | CANCELLED
+  status        String  @default("NOT_STARTED")
+
+  isDeleted Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course Course? @relation(fields: [courseId], references: [id])
+
+  @@index([status, startAt])
+  @@map("Activity")
+}
+
+/// 渠道表。cost 是 ROI 计算的分母
+model Channel {
+  id   String @id @default(cuid())
+  name String @unique
+  /// PAID_AD | CONTENT | REFERRAL | CROSS | ORGANIC | OTHER
+  type   String
+  /// 投放成本
+  cost   Float    @default(0)
+  ownerId String?
+  /// ACTIVE | DISABLED
+  status String @default("ACTIVE")
+  remark String?
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads         Lead[]
+  opportunities Opportunity[]
+  customers     Customer[]
+
+  @@map("Channel")
+}
+
+/* ==========================================================================
+   3. 过程记录表（全部仅追加，不可编辑不可删除）
+   ========================================================================== */
+
+/// 跟进记录。bizType + bizId 多态关联线索/商机/客户
+model FollowUp {
+  id      String @id @default(cuid())
+  bizType String
+  bizId   String
+
+  /// PHONE | WECHAT | MEETING | SMS | OTHER
+  method  String
+  /// INTERESTED | NOT_INTERESTED | OBSERVE | WECHAT_ADDED | TRIAL_SIGNED | OTHER
+  result  String?
+  /// 10–1000 字，由 zod 校验
+  content String
+  /// 商机专用：下一步计划
+  nextPlan String?
+  nextFollowAt DateTime?
+
+  createdById String
+  createdAt   DateTime @default(now())
+
+  createdBy   User?        @relation(fields: [createdById], references: [id])
+  attachments Attachment[]
+
+  @@index([bizType, bizId, createdAt(sort: Desc)])
+  @@index([createdById])
+  @@index([nextFollowAt])
+  @@map("FollowUp")
+}
+
+/// 客户服务记录
+model ServiceRecord {
+  id         String @id @default(cuid())
+  customerId String
+  /// TRIAL | LESSON | TUTOR | QA
+  type       String
+  serviceDate DateTime
+  /// 服务时长（分钟）
+  duration   Int?
+  staffId    String?
+  content    String
+  rating     Int?
+  abnormal   Boolean @default(false)
+
+  createdById String
+  createdAt   DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation(fields: [createdById], references: [id])
+
+  @@index([customerId, serviceDate(sort: Desc)])
+  @@map("ServiceRecord")
+}
+
+/**
+ * 状态变更日志 —— 看板统计的唯一依据
+ * BR-D04：转化以状态跃迁时间为准，非数据创建时间
+ * 以下 11 个动作每一步都必须写日志，漏一处看板就错一处：
+ * 新建线索 / 分配 / 转公海 / 领取 / 标记伪线索 / 转商机 /
+ * 阶段推进 / 赢单 / 输单 / 转客户 / 客户状态变更
+ */
+model StatusChangeLog {
+  id      String @id @default(cuid())
+  bizType String
+  bizId   String
+
+  fromStatus String?
+  toStatus   String
+  action     String
+  /// 阶段变更时记录，如 FOLLOWING → NEGOTIATING
+  remark     String?
+
+  changedById String
+  changedAt   DateTime @default(now())
+
+  changedBy User? @relation(fields: [changedById], references: [id])
+
+  @@index([bizType, bizId, changedAt(sort: Desc)])
+  @@index([changedAt(sort: Desc)])
+  @@index([bizType, toStatus, changedAt(sort: Desc)])
+  @@map("StatusChangeLog")
+}
+
+/// 归属变更轨迹。BR-H05 领取/踢回均需写入
+model OwnershipHistory {
+  id      String @id @default(cuid())
+  bizType String
+  bizId   String
+
+  fromOwnerId String?
+  toOwnerId   String?
+  /// ASSIGN | CLAIM | RETURN_POOL | AUTO_RECYCLE | DISABLE_ACCOUNT | TRANSFER
+  action      String
+  reason      String?
+  remark      String?
+
+  changedById String
+  changedAt   DateTime @default(now())
+
+  changedBy User? @relation(fields: [changedById], references: [id])
+
+  @@index([bizType, bizId, changedAt(sort: Desc)])
+  @@map("OwnershipHistory")
+}
+
+/// 商机金额变更历史（BR-O05）
+model AmountHistory {
+  id        String   @id @default(cuid())
+  oppId     String
+  fromAmount Float?
+  toAmount   Float
+  reason     String?
+
+  changedById String
+  changedAt   DateTime @default(now())
+
+  opp       Opportunity @relation(fields: [oppId], references: [id], onDelete: Cascade)
+  changedBy User?       @relation(fields: [changedById], references: [id])
+
+  @@index([oppId, changedAt(sort: Desc)])
+  @@map("AmountHistory")
+}
+
+/// 课程价格变更历史（BR-R02：调价不影响历史商机金额）
+model PriceHistory {
+  id        String   @id @default(cuid())
+  courseId  String
+  fromPrice Float?
+  toPrice   Float
+  reason    String?
+
+  changedById String
+  changedAt   DateTime @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, changedAt(sort: Desc)])
+  @@map("PriceHistory")
+}
+
+/// 操作日志。PRD 4.6.4 定义 11 类必记操作，仅追加不可删改
+model OperationLog {
+  id             String  @id @default(cuid())
+  operatorId     String?
+  operatorDeptId String?
+  operatorName   String
+
+  /// LOGIN | LOGOUT | LOGIN_FAILED | CREATE | UPDATE | DELETE | ASSIGN |
+  /// STATUS_CHANGE | POOL_RETURN | POOL_CLAIM | PSEUDO_MARK | CONVERT_LEAD |
+  /// CONVERT_CUSTOMER | PERM_CHANGE | ACCOUNT_CHANGE | REVEAL_PHONE | EXPORT | FOLLOW_UP
+  action     String
+  targetType String?
+  targetId   String?
+  /// 概要说明（如"导出线索 120 条"）
+  summary    String?
+  /// 变更前后值
+  before Json?
+  after  Json?
+
+  ip String?
+  ua String?
+
+  createdAt DateTime @default(now())
+
+  operator User? @relation(fields: [operatorId], references: [id])
+
+  @@index([createdAt(sort: Desc)])
+  @@index([operatorId, createdAt(sort: Desc)])
+  @@index([targetType, targetId])
+  @@index([action, createdAt(sort: Desc)])
+  @@map("OperationLog")
+}
+
+/// 附件
+model Attachment {
+  id       String  @id @default(cuid())
+  bizType  String
+  bizId    String
+  filename String
+  size     Int
+  mime     String
+  url      String
+
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  uploadedBy User? @relation(fields: [uploadedById], references: [id])
+  lead        Lead?        @relation(fields: [leadId], references: [id])
+  followUp    FollowUp?    @relation(fields: [followUpId], references: [id])
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  customer    Customer?    @relation(fields: [customerId], references: [id])
+
+  /// 多态外键：同一张表服务线索/商机/客户，
+  /// 始终只有其中一个非空，配合 bizType + bizId 查询
+  leadId        String?
+  followUpId    String?
+  opportunityId String?
+  customerId    String?
+
+  @@index([bizType, bizId])
+  @@map("Attachment")
+}
+
+/// 待办。由「下次跟进时间」生成，BR-D02 要求不做缓存
+model Todo {
+  id      String @id @default(cuid())
+  bizType String
+  bizId   String
+  /// FOLLOW_UP | CLAIM_REMINDER
+  type    String
+  dueAt   DateTime
+  doneAt  DateTime?
+  ownerId String
+
+  createdAt DateTime @default(now())
+
+  @@index([ownerId, doneAt, dueAt])
+  @@map("Todo")
+}
+
+/// 通知中心。超期预警推送（PRD 待确认问题 8：站内 + 企微）
+model Notification {
+  id     String  @id @default(cuid())
+  userId String
+  /// LEAD_OVERDUE | OPP_OVERDUE | NEW_CLAIM | SYSTEM
+  type   String
+  title  String
+  body   String?
+  link   String?
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt, createdAt(sort: Desc)])
+  @@map("Notification")
+}

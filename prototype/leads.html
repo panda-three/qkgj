@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>线索管理 · 轻客管家</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .col-config-list { max-height: 300px; overflow-y: auto; }
+  .col-config-item {
+    display: flex; align-items: center; gap: 9px; padding: 7px 9px;
+    border-radius: var(--radius-sm); font-size: 13px; cursor: pointer;
+  }
+  .col-config-item:hover { background: var(--ink-100); }
+  .col-config-item.is-hidden .cc-name { color: var(--ink-400); text-decoration: line-through; }
+  .col-config-item .drag-h { color: var(--ink-300); cursor: grab; margin-left: auto; }
+  .quick-filter { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .quick-tab {
+    padding: 6px 13px; border-radius: 18px; font-size: 13px;
+    border: 1px solid var(--ink-200); background: #fff; color: var(--ink-600);
+    cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 6px;
+  }
+  .quick-tab:hover { border-color: var(--brand-300); color: var(--brand-600); }
+  .quick-tab.active { background: var(--brand-500); border-color: var(--brand-500); color: #fff; font-weight: 500; }
+  .quick-tab.active .badge-count { background: rgba(255,255,255,.28); color: #fff; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main-area">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">线索管理</h1>
+          <p class="page-desc">
+            线索为去重唯一实体（手机号唯一）· 伪线索为终态默认隐藏 · 列表数据受部门与归属人双维度权限约束
+          </p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="btnImport" data-min="SALES_MANAGER">导入</button>
+          <button class="btn" id="btnExport">导出</button>
+          <button class="btn" id="btnColConfig">列配置</button>
+          <button class="btn btn-primary" id="btnCreate">新建线索</button>
+        </div>
+      </div>
+
+      <!-- 快捷状态页签 -->
+      <div class="quick-filter" id="quickTabs">
+        <button class="quick-tab active" data-status="">全部线索 <span class="badge-count is-muted">1,286</span></button>
+        <button class="quick-tab" data-status="PENDING">待分配 <span class="badge-count is-muted">42</span></button>
+        <button class="quick-tab" data-status="FOLLOWING">待跟进 <span class="badge-count">342</span></button>
+        <button class="quick-tab" data-status="OVERDUE">超期未跟进 <span class="badge-count">47</span></button>
+        <button class="quick-tab" data-status="NEVER">从未跟进 <span class="badge-count is-muted">18</span></button>
+        <button class="quick-tab" data-status="PSEUDO">伪线索 <span class="badge-count is-muted">96</span></button>
+        <button class="quick-tab" data-status="CONVERTED">已转商机 <span class="badge-count is-muted">419</span></button>
+      </div>
+
+      <!-- 筛选区 -->
+      <div class="card u-mb-16">
+        <div class="filter-bar">
+          <div class="filter-grid">
+            <div class="filter-item">
+              <span class="filter-label">关键词</span>
+              <div class="search-box u-flex-1">
+                <span class="search-icon" id="kwIcon"></span>
+                <input class="input" id="kwInput" placeholder="手机号 / 姓名 / 公司">
+              </div>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">线索状态</span>
+              <select class="select" id="fStatus">
+                <option value="">全部状态</option>
+                <option>待分配</option>
+                <option>待跟进</option>
+                <option>伪线索</option>
+                <option>公海池</option>
+                <option>已转商机</option>
+              </select>
+            </div>
+            <div class="filter-item" data-min="SALES_MANAGER">
+              <span class="filter-label">归属人</span>
+              <select class="select"><option>全部</option><option>王小雨</option><option>陈思远</option><option>赵磊</option></select>
+            </div>
+            <div class="filter-item" data-min="SALES_MANAGER">
+              <span class="filter-label">所属部门</span>
+              <select class="select"><option>全部部门</option><option>华东销售部</option><option>华北销售部</option></select>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">来源渠道</span>
+              <select class="select"><option>全部渠道</option><option>抖音短视频</option><option>小红书</option><option>朋友转介绍</option></select>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">意向课程</span>
+              <select class="select"><option>全部课程</option><option>Python 数据分析</option><option>青少年数学思维</option><option>成人学历提升</option></select>
+            </div>
+            <div class="filter-item" style="grid-column:span 2">
+              <span class="filter-label">创建时间</span>
+              <div class="u-flex u-gap-6 u-flex-1" style="min-width:0">
+                <input type="date" class="input" value="2026-10-01">
+                <span class="u-muted-sm" style="flex-shrink:0">至</span>
+                <input type="date" class="input" value="2026-10-10">
+              </div>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">跟进状态</span>
+              <select class="select">
+                <option value="">全部</option>
+                <option>今日待跟进</option>
+                <option>超期未跟进</option>
+                <option>从未跟进</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary" id="btnSearch">查询</button>
+            <button class="btn" id="btnReset">重置</button>
+            <button class="u-link u-mb-8" style="font-size:13px;margin-left:4px" id="btnToggleFilter">收起筛选</button>
+            <span class="u-right u-muted-sm" data-min="SALES">当前角色仅可查看本人归属数据与公海数据</span>
+          </div>
+        </div>
+        <div class="active-filters" id="activeFilters"></div>
+      </div>
+
+      <!-- 列表 -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="title-bar"></span>线索列表
+            <span class="u-muted-sm" style="font-weight:400">共 1,286 条</span>
+          </div>
+          <div class="u-center u-gap-8">
+            <span class="u-muted-sm">排序：</span>
+            <select class="select" style="height:30px;width:auto;font-size:12.5px">
+              <option>最后跟进时间</option>
+              <option>创建时间</option>
+              <option>跟进次数</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 批量操作条 -->
+        <div class="batch-bar u-hidden" data-batch-bar>
+          <span>已选择 <strong data-batch-count>0</strong> 条线索</span>
+          <div class="u-right u-center u-gap-8">
+            <button class="btn btn-sm btn-primary" data-batch="assign">批量分配</button>
+            <button class="btn btn-sm" data-batch="pseudo">批量标记伪线索</button>
+            <button class="btn btn-sm" data-batch="pool">踢回公海</button>
+            <button class="btn btn-sm" id="btnBatchExport">批量导出</button>
+            <button class="btn btn-sm btn-ghost" id="btnCancelBatch">取消选择</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="col-check"><label class="checkbox"><input type="checkbox" data-check-all><span class="box"></span></label></th>
+                <th>姓名 / 手机号</th>
+                <th data-col="channel">来源渠道</th>
+                <th data-col="course">意向课程</th>
+                <th data-col="status">状态</th>
+                <th data-col="owner" data-min="SALES_MANAGER">归属人</th>
+                <th data-col="dept" data-min="SALES_MANAGER">所属部门</th>
+                <th class="sortable" data-col="create">创建时间<span class="sort-icon"></span></th>
+                <th class="sortable" data-col="lastFollow">最后跟进<span class="sort-icon"></span></th>
+                <th data-col="count">跟进次数</th>
+                <th data-col="next">下次跟进</th>
+                <th class="col-actions">操作</th>
+              </tr>
+            </thead>
+            <tbody id="leadBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span class="page-info">第 1 - 20 条，共 1,286 条</span>
+          <div class="u-center u-gap-12">
+            <div class="page-size">
+              <span>每页</span>
+              <select class="select">
+                <option selected>20</option><option>50</option><option>100</option>
+              </select>
+              <span>条</span>
+            </div>
+            <div class="page-nav">
+              <button class="page-btn" disabled>‹</button>
+              <button class="page-btn active">1</button>
+              <button class="page-btn">2</button>
+              <button class="page-btn">3</button>
+              <button class="page-btn">4</button>
+              <button class="page-btn">5</button>
+              <span class="page-ellipsis">…</span>
+              <button class="page-btn">65</button>
+              <button class="page-btn">›</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+/* ============ 初始化 ============ */
+initPage({
+  key: 'leads',
+  breadcrumb: [{ text: '首页', href: 'dashboard.html' }, { text: '线索管理' }]
+});
+document.getElementById('kwIcon').innerHTML = icon('search', 15);
+document.querySelectorAll('th.sortable .sort-icon').forEach(el => el.innerHTML = icon('arrowUp', 12));
+
+/* ============ 数据 ============ */
+const LEADS = [
+  { id: 'LD2026101001', name: '林雅琴', phone: '13812345678', channel: '抖音短视频', course: 'Python 数据分析训练营', status: 'FOLLOWING', owner: '王小雨', dept: '华东·一组', create: '10-08 09:12', lastFollow: '10-09 15:20', count: 3, next: '今日 10:30', overdue: false, cls: 'avatar-c' },
+  { id: 'LD2026101002', name: '黄志远', phone: '13923456789', channel: '百度 SEM', course: '职场演讲表达课', status: 'FOLLOWING', owner: '周杰', dept: '华东·一组', create: '10-05 11:30', lastFollow: '10-07 10:05', count: 2, next: '逾期 2 天', overdue: true, cls: 'avatar-b' },
+  { id: 'LD2026101003', name: '何俊豪', phone: '15034567890', channel: '小红书', course: '青少年数学思维提升', status: 'FOLLOWING', owner: '王小雨', dept: '华东·一组', create: '10-09 14:22', lastFollow: '10-09 16:40', count: 1, next: '今日 14:00', overdue: false, cls: 'avatar-d' },
+  { id: 'LD2026101004', name: '苏婉清', phone: '18645678901', channel: '知乎内容', course: '成人学历提升 · 专升本', status: 'FOLLOWING', owner: '陈思远', dept: '华东·一组', create: '10-06 09:05', lastFollow: '10-08 11:30', count: 4, next: '明日 10:00', overdue: false, cls: 'avatar-a' },
+  { id: 'LD2026101005', name: '郑一鸣', phone: '13756789012', channel: '朋友转介绍', course: '少儿编程启蒙班', status: 'TO_POOL', owner: '—', dept: '公海', create: '10-07 20:10', lastFollow: '—', count: 0, next: '—', overdue: false, cls: 'avatar-e' },
+  { id: 'LD2026101006', name: '冯雅琪', phone: '15867890123', channel: '朋友圈广告', course: '成人学历提升 · 专升本', status: 'FOLLOWING', owner: '赵磊', dept: '华东·二组', create: '10-04 10:15', lastFollow: '10-09 09:50', count: 5, next: '明日 09:30', overdue: false, cls: 'avatar-f' },
+  { id: 'LD2026101007', name: '吕子豪', phone: '15978901234', channel: '抖音短视频', course: 'Python 数据分析训练营', status: 'PENDING', owner: '—', dept: '待分配', create: '10-10 08:45', lastFollow: '—', count: 0, next: '—', overdue: false, cls: 'avatar-c' },
+  { id: 'LD2026101008', name: '田思涵', phone: '13589012345', channel: '知乎内容', course: '青少年英语听力强化', status: 'FOLLOWING', owner: '吴敏', dept: '华北·二组', create: '10-03 16:20', lastFollow: '10-06 14:00', count: 2, next: '逾期 1 天', overdue: true, cls: 'avatar-e' },
+  { id: 'LD2026101009', name: '徐嘉宁', phone: '18890123456', channel: '小红书', course: '职场演讲表达课', status: 'CONVERTED', owner: '王小雨', dept: '华东·一组', create: '09-28 13:40', lastFollow: '10-02 10:20', count: 6, next: '已转商机', overdue: false, cls: 'avatar-c' },
+  { id: 'LD2026101010', name: '马逸飞', phone: '13101234567', channel: '百度 SEM', course: '少儿编程启蒙班', status: 'PSEUDO', owner: '周杰', dept: '华东·一组', create: '09-25 11:00', lastFollow: '09-26 09:15', count: 1, next: '—', overdue: false, cls: 'avatar-b' },
+  { id: 'LD2026101011', name: '曹梦琪', phone: '13212345678', channel: '朋友圈广告', course: 'Python 数据分析训练营', status: 'FOLLOWING', owner: '孙悦', dept: '华北·一组', create: '10-02 09:30', lastFollow: '10-08 17:10', count: 3, next: '今日 16:30', overdue: false, cls: 'avatar-e' },
+  { id: 'LD2026101012', name: '邵天佑', phone: '17612345678', channel: '朋友转介绍', course: '青少年数学思维提升', status: 'TO_POOL', owner: '—', dept: '公海', create: '10-09 19:30', lastFollow: '—', count: 0, next: '—', overdue: false, cls: 'avatar-d' },
+];
+
+/* ============ 渲染 ============ */
+function renderRows(list) {
+  const body = document.getElementById('leadBody');
+  if (!list.length) {
+    body.innerHTML = `<tr><td colspan="13">
+      <div class="empty-state">
+        <div class="empty-icon">${icon('inbox', 26)}</div>
+        <div class="empty-title">没有符合条件的线索</div>
+        <div class="empty-desc">试试调整筛选条件，或切换到其他状态页签查看</div>
+        <button class="btn" onclick="document.getElementById('btnReset').click()">重置筛选</button>
+      </div></td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(r => {
+    const isPool = r.status === 'TO_POOL';
+    const rowCls = r.status === 'PSEUDO' ? 'row-muted' : r.overdue ? 'row-danger' : '';
+    const nextCell = r.overdue
+      ? `<span class="tag tag-danger">${r.next}</span>`
+      : (r.next !== '—' ? `<span class="u-muted-sm">${r.next}</span>` : '<span class="u-muted-sm">—</span>');
+
+    return `<tr class="${rowCls}" data-id="${r.id}">
+      <td class="col-check"><label class="checkbox"><input type="checkbox" data-check-row="${r.id}"><span class="box"></span></label></td>
+      <td>
+        <div class="user-cell">
+          <span class="avatar avatar-sm ${r.cls}">${r.name[0]}</span>
+          <div>
+            <div class="cell-main">${r.name}</div>
+            <div class="cell-sub masked-phone" data-phone="${r.phone}">
+              <span class="phone-text">${maskPhone(r.phone)}</span>
+              <span class="eye-btn" style="margin-left:4px">${icon('eye', 13)}</span>
+            </div>
+          </div>
+        </div>
+      </td>
+      <td><span class="tag tag-outline">${r.channel}</span></td>
+      <td><span class="u-ellipsis" style="display:block;max-width:150px" title="${r.course}">${r.course}</span></td>
+      <td>${statusTag(r.status)}</td>
+      <td data-min="SALES_MANAGER">${r.owner === '—' ? '<span class="u-muted-sm">未分配</span>' :
+        `<div class="user-cell"><span class="avatar avatar-sm ${r.cls}" style="width:20px;height:20px;font-size:10px">${r.owner[0]}</span>${r.owner}</div>`}</td>
+      <td data-min="SALES_MANAGER"><span class="u-muted-sm">${r.dept}</span></td>
+      <td><span class="u-muted-sm u-mono">${r.create}</span></td>
+      <td><span class="u-muted-sm u-mono">${r.lastFollow}</span></td>
+      <td><span class="u-mono">${r.count}</span> 次</td>
+      <td>${nextCell}</td>
+      <td class="col-actions">
+        <div class="link-actions">
+          <span onclick="location.href='lead-detail.html'">详情</span>
+          ${isPool
+            ? `<span onclick="claimLead('${r.name}')">领取</span>`
+            : r.status === 'PENDING'
+              ? `<span onclick="openAssign('${r.name}')" data-min="SALES_MANAGER">分配</span>
+                 <span onclick="openPseudo('${r.name}')">标记伪线索</span>`
+              : `<span onclick="location.href='lead-detail.html#follow'">跟进</span>
+                 <span onclick="location.href='lead-detail.html#convert'" class="${r.status === 'CONVERTED' || r.status === 'PSEUDO' ? 'disabled' : ''}">转商机</span>
+                 <span onclick="openPool('${r.name}')" class="${r.status === 'PSEUDO' ? 'disabled' : ''}">踢回公海</span>`}
+          <span onclick="toast('info','原型演示：更多操作菜单')">更多</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  bindPhoneEyes(document.getElementById('leadBody'));
+  bindSelectAll(document.getElementById('leadBody'));
+  applyPerms(document.getElementById('leadBody'), currentRole());
+}
+
+let currentStatus = '';
+function filterData() {
+  const kw = document.getElementById('kwInput').value.trim();
+  let list = LEADS.slice();
+  if (currentStatus === 'OVERDUE') list = list.filter(r => r.overdue);
+  else if (currentStatus === 'NEVER') list = list.filter(r => r.count === 0);
+  else if (currentStatus) list = list.filter(r => r.status === currentStatus);
+  if (kw) list = list.filter(r => r.name.includes(kw) || r.phone.includes(kw) || r.course.includes(kw));
+  renderRows(list);
+  renderChips();
+}
+renderRows(LEADS);
+
+/* ============ 已选筛选条件 ============ */
+function renderChips() {
+  const chips = [];
+  const statusText = { PENDING: '待分配', FOLLOWING: '待跟进', PSEUDO: '伪线索', CONVERTED: '已转商机', OVERDUE: '超期未跟进', NEVER: '从未跟进' };
+  if (currentStatus) chips.push({ label: '状态', value: statusText[currentStatus], key: 'status' });
+  const kw = document.getElementById('kwInput').value.trim();
+  if (kw) chips.push({ label: '关键词', value: kw, key: 'kw' });
+  const st = document.getElementById('fStatus').value;
+  if (st) chips.push({ label: '线索状态', value: st, key: 'fStatus' });
+
+  const box = document.getElementById('activeFilters');
+  box.innerHTML = chips.map(c =>
+    `<span class="filter-chip">${c.label}：${c.value}<span class="chip-x" data-chip="${c.key}">${icon('close', 9, 3)}</span></span>`
+  ).join('');
+  box.querySelectorAll('[data-chip]').forEach(x => x.addEventListener('click', () => {
+    const k = x.dataset.chip;
+    if (k === 'status') {
+      currentStatus = '';
+      document.querySelectorAll('.quick-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector('.quick-tab[data-status=""]').classList.add('active');
+    }
+    if (k === 'kw') document.getElementById('kwInput').value = '';
+    if (k === 'fStatus') document.getElementById('fStatus').value = '';
+    filterData();
+  }));
+}
+
+/* ============ 顶部交互 ============ */
+document.getElementById('quickTabs').addEventListener('click', e => {
+  const tab = e.target.closest('.quick-tab');
+  if (!tab) return;
+  e.currentTarget.querySelectorAll('.quick-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  currentStatus = tab.dataset.status;
+  filterData();
+});
+document.getElementById('kwInput').addEventListener('keydown', e => { if (e.key === 'Enter') filterData(); });
+document.getElementById('btnSearch').addEventListener('click', () => { filterData(); toast('info', '已按当前条件重新查询'); });
+document.getElementById('btnReset').addEventListener('click', () => {
+  document.getElementById('kwInput').value = '';
+  document.getElementById('fStatus').value = '';
+  document.querySelectorAll('.filter-grid select').forEach(s => s.selectedIndex = 0);
+  currentStatus = '';
+  document.querySelectorAll('.quick-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.quick-tab[data-status=""]').classList.add('active');
+  filterData();
+  toast('success', '筛选条件已重置');
+});
+document.getElementById('btnToggleFilter').addEventListener('click', function () {
+  const grid = document.querySelector('.filter-grid');
+  const hidden = grid.classList.toggle('u-hidden');
+  this.textContent = hidden ? '展开筛选' : '收起筛选';
+});
+
+/* ============ 列配置 ============ */
+const COLS = [
+  ['channel', '来源渠道', true], ['course', '意向课程', true], ['status', '状态', true],
+  ['owner', '归属人', true], ['dept', '所属部门', true], ['create', '创建时间', true],
+  ['lastFollow', '最后跟进时间', true], ['count', '跟进次数', true], ['next', '下次跟进时间', true],
+];
+document.getElementById('btnColConfig').addEventListener('click', () => {
+  openModal({
+    title: '列配置',
+    sub: '勾选控制显示，拖拽调整列顺序（原型仅演示交互）',
+    body: `<div class="col-config-list" id="colList">
+      ${COLS.map(([k, n, on]) => `
+        <label class="col-config-item ${on ? '' : 'is-hidden'}" data-key="${k}">
+          <span class="checkbox"><input type="checkbox" ${on ? 'checked' : ''}><span class="box"></span></span>
+          <span class="cc-name">${n}</span>
+          <span class="drag-h">${icon('drag', 14)}</span>
+        </label>`).join('')}
+    </div>
+    <div class="alert alert-info u-mt-16">
+      <span class="alert-icon">${icon('info', 16)}</span>
+      <div>列配置为<b>个人级</b>偏好，仅影响当前账号的展示，不影响他人。</div>
+    </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn" data-modal-close onclick="toast('success','列配置已保存')">保存</button>
+             <button class="btn btn-primary" data-modal-close>恢复默认</button>`,
+    onMount: mask => {
+      mask.querySelectorAll('.col-config-item input').forEach(cb => {
+        cb.addEventListener('change', () => {
+          cb.closest('.col-config-item').classList.toggle('is-hidden', !cb.checked);
+          const key = cb.closest('.col-config-item').dataset.key;
+          const th = document.querySelector(`th[data-col="${key}"]`);
+          if (th) th.classList.toggle('u-hidden', !cb.checked);
+        });
+      });
+    },
+  });
+});
+
+/* ============ 新建线索 ============ */
+document.getElementById('btnCreate').addEventListener('click', () => {
+  const isSales = currentRole() === 'SALES';
+  openModal({
+    title: '新建线索',
+    sub: '带 * 为必填项 · 手机号为线索去重唯一键',
+    size: 'lg',
+    body: `<form id="createForm">
+      <div class="form-grid">
+        <div class="field">
+          <label class="field-label">姓名 <span class="req">*</span></label>
+          <input class="input" placeholder="请输入客户姓名" maxlength="50">
+        </div>
+        <div class="field">
+          <label class="field-label">手机号 <span class="req">*</span></label>
+          <input class="input" id="newPhone" maxlength="11" placeholder="11 位数字，系统内唯一" onblur="checkDup()">
+          <div class="field-hint" id="dupHint">用于线索去重，重复录入将引导至已有线索</div>
+        </div>
+        <div class="field">
+          <label class="field-label">性别</label>
+          <select class="select"><option>未知</option><option>男</option><option>女</option></select>
+        </div>
+        <div class="field">
+          <label class="field-label">来源渠道 <span class="req">*</span></label>
+          <select class="select"><option>其他</option><option>抖音短视频</option><option>小红书</option><option>百度 SEM</option><option>朋友圈广告</option><option>知乎内容</option><option>朋友转介绍</option></select>
+        </div>
+        <div class="field col-span-2">
+          <label class="field-label">意向课程 / 活动 <span class="req">*</span></label>
+          <select class="select"><option value="">请选择（用于商机转化预填）</option><option>Python 数据分析训练营</option><option>青少年数学思维提升</option><option>成人学历提升 · 专升本</option><option>职场演讲表达课</option><option>少儿编程启蒙班</option><option class="u-muted">青少年英语听力强化（已下架，不可选）</option></select>
+          <div class="field-hint">已下架课程不可被选择，历史数据仍保留展示</div>
+        </div>
+        <div class="field col-span-2">
+          <label class="field-label">归属人</label>
+          ${isSales
+            ? `<div class="readonly-value">${icon('lock', 13)} 王小雨（本人）· 顾问新建线索归属人强制为本人</div>`
+            : `<select class="select"><option value="">不选择（进入「待分配」）</option><option>王小雨</option><option>陈思远</option><option>赵磊</option></select>`}
+          <div class="field-hint">${isSales ? '规则 BR-L02：顾问无权选择他人' : '不选则状态为「待分配」，选择后为「待跟进」'}</div>
+        </div>
+        <div class="field col-span-2">
+          <label class="field-label">备注</label>
+          <textarea class="textarea" placeholder="补充说明，如学员关注点、来源落地页等（≤ 500 字）" maxlength="500"></textarea>
+        </div>
+      </div>
+    </form>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" id="btnSaveLead">保存线索</button>`,
+    onMount: mask => {
+      mask.querySelector('#btnSaveLead').addEventListener('click', () => {
+        const phone = mask.querySelector('#newPhone').value.trim();
+        if (!/^1\d{10}$/.test(phone)) {
+          toast('error', '手机号格式不正确，应为 11 位数字');
+          return;
+        }
+        closeModal();
+        toast('success', '线索创建成功，状态：' + (currentRole() === 'SALES' ? '待跟进' : '待分配'));
+      });
+    },
+  });
+});
+
+/* 手机号查重演示 */
+function checkDup() {
+  const phone = document.getElementById('newPhone').value.trim();
+  const hint = document.getElementById('dupHint');
+  if (!phone) return;
+  const exist = LEADS.find(r => r.phone === phone);
+  if (exist) {
+    hint.className = 'field-error';
+    hint.innerHTML = `该手机号已存在有效线索：${exist.name}（归属人 ${exist.owner}），请引导至已有线索`;
+    hint.style.cursor = 'pointer';
+    hint.onclick = () => { closeModal(); location.href = 'lead-detail.html'; };
+  } else if (/^1\d{10}$/.test(phone)) {
+    hint.className = 'field-hint';
+    hint.innerHTML = '✓ 手机号可用，未发现重复线索';
+    hint.onclick = null;
+  }
+}
+
+/* ============ 导入 / 导出 ============ */
+document.getElementById('btnImport').addEventListener('click', () => {
+  openModal({
+    title: '批量导入线索',
+    sub: '支持 Excel（.xlsx）单文件，最大 5000 行',
+    size: 'lg',
+    body: `
+      <div class="upload-zone" id="uploadZone">
+        <div style="color:var(--brand-500);margin-bottom:8px">${icon('upload', 30)}</div>
+        <div style="font-size:14px;font-weight:500;color:var(--ink-700)">点击选择文件，或将文件拖拽至此</div>
+        <div class="u-muted-sm u-mt-8">仅支持 .xlsx 格式，单次不超过 10MB</div>
+      </div>
+      <div class="u-mt-16 u-flex u-gap-8">
+        <button class="btn btn-sm">${icon('download', 14)} 下载导入模板</button>
+        <span class="u-muted-sm">模板含字段说明与示例数据</span>
+      </div>
+      <div class="alert alert-warning u-mt-16">
+        <span class="alert-icon">${icon('alert', 16)}</span>
+        <div><b>导入规则</b>：手机号重复的行将被跳过并在结果中列出；已下架课程的行会被拒绝；
+        状态一律置为「待分配」。超过 500 条将转为异步任务。</div>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','导入任务已创建，完成后通知中心将推送结果')">开始导入</button>`,
+    onMount: mask => {
+      mask.querySelector('#uploadZone').addEventListener('click', () => {
+        toast('info', '原型演示：此处唤起文件选择器');
+      });
+    },
+  });
+});
+function doExport() {
+  const ids = getCheckedIds(document.getElementById('leadBody'));
+  toast('success', ids.length
+    ? `已导出所选 ${ids.length} 条线索（手机号按脱敏规则处理，导出行为已记录日志）`
+    : '导出任务已创建，完成后可在通知中心下载（已记录导出日志）');
+}
+document.getElementById('btnExport').addEventListener('click', doExport);
+document.getElementById('btnBatchExport').addEventListener('click', doExport);
+
+/* ============ 批量操作 ============ */
+document.getElementById('btnCancelBatch').addEventListener('click', () => {
+  document.querySelectorAll('[data-check-row]').forEach(r => { r.checked = false; r.closest('tr').classList.remove('is-selected'); });
+  document.querySelector('[data-check-all]').checked = false;
+  updateBatchBar(document);
+});
+
+document.querySelectorAll('[data-batch]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const ids = getCheckedIds(document.getElementById('leadBody'));
+    const action = btn.dataset.batch;
+    if (action === 'assign') {
+      openAssign(`所选 ${ids.length} 条线索`);
+    } else if (action === 'pseudo') {
+      confirmModal({
+        title: '批量标记为伪线索',
+        tone: 'danger',
+        okType: 'danger',
+        okText: '确认标记',
+        message: `即将把所选 <b>${ids.length}</b> 条线索标记为伪线索。<br>
+                  标记后为<b>终态不可恢复</b>，历史跟进记录保留但不计入转化率统计。`,
+        onOk: () => toast('success', `已将 ${ids.length} 条线索标记为伪线索，操作已记录日志`),
+      });
+    } else if (action === 'pool') {
+      openPool(`所选 ${ids.length} 条线索`);
+    }
+  });
+});
+
+/* ============ 弹窗：分配 ============ */
+const CONSULTANTS = [
+  { name: '王小雨', dept: '华东·一组', load: 32, cls: 'avatar-c' },
+  { name: '陈思远', dept: '华东·一组', load: 28, cls: 'avatar-a' },
+  { name: '赵磊',   dept: '华东·二组', load: 41, cls: 'avatar-d' },
+  { name: '周杰',   dept: '华东·一组', load: 19, cls: 'avatar-b' },
+  { name: '孙悦',   dept: '华北·一组', load: 36, cls: 'avatar-e' },
+];
+
+function openAssign(target) {
+  if (currentRole() === 'SALES') {
+    toast('error', '无操作权限：销售顾问不可分配线索');
+    return;
+  }
+  let strategy = 'balance';
+  openModal({
+    title: '分配线索',
+    sub: `分配对象：${target}`,
+    body: `
+      <div class="field">
+        <label class="field-label">分配策略</label>
+        <div data-radio-group="strategy" style="display:flex;gap:10px;flex-wrap:wrap">
+          <div class="card" data-radio-value="balance" style="flex:1;min-width:150px;padding:11px 13px;border:1.5px solid var(--brand-500);background:var(--brand-50);cursor:pointer">
+            <div class="u-strong" style="font-size:13px">均衡分配</div>
+            <div class="u-muted-sm" style="margin-top:3px">按当前待跟进数量自动均分</div>
+          </div>
+          <div class="card" data-radio-value="dept" style="flex:1;min-width:150px;padding:11px 13px;border:1.5px solid var(--ink-200);cursor:pointer">
+            <div class="u-strong" style="font-size:13px">按部门均分</div>
+            <div class="u-muted-sm" style="margin-top:3px">部门下全部顾问平分</div>
+          </div>
+          <div class="card" data-radio-value="manual" style="flex:1;min-width:150px;padding:11px 13px;border:1.5px solid var(--ink-200);cursor:pointer">
+            <div class="u-strong" style="font-size:13px">指定人员</div>
+            <div class="u-muted-sm" style="margin-top:3px">手动选择归属人</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field u-mt-16">
+        <label class="field-label">顾问负载（分配前可查看在跟量）</label>
+        <div>
+          ${CONSULTANTS.map((c, i) => `
+            <label class="todo-item" style="padding:8px 10px">
+              <label class="checkbox"><input type="radio" name="assignee" ${i === 0 ? 'checked' : ''}><span class="box"></span></label>
+              <span class="avatar avatar-sm ${c.cls}">${c.name[0]}</span>
+              <div class="todo-main">
+                <div class="todo-title" style="font-size:13px">${c.name} <span class="u-muted-sm">${c.dept}</span></div>
+                <div class="mini-bar-track" style="max-width:110px;margin-top:4px">
+                  <div class="mini-bar ${c.load > 38 ? 'is-warning' : ''}" style="width:${(c.load / 45) * 100}%"></div>
+                </div>
+              </div>
+              <span class="tag ${c.load > 38 ? 'tag-warning' : 'tag-default'}">在跟 ${c.load}</span>
+            </label>`).join('')}
+        </div>
+      </div>
+
+      <div class="alert alert-warning u-mt-16">
+        <span class="alert-icon">${icon('alert', 16)}</span>
+        <div>已有跟进记录的线索重新分配时，将<b>移出当前归属人视野</b>，历史记录仍可追溯。分配后状态由「待分配」变为「待跟进」。</div>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','分配完成，状态已更新为待跟进，分配人与时间已记录')">确认分配</button>`,
+    onMount: mask => {
+      bindRadioCards(mask);
+      mask.querySelector('[data-radio-group="strategy"]').addEventListener('radiochange', e => {
+        mask.querySelectorAll('[data-radio-value]').forEach(c => {
+          const on = c.dataset.radioValue === e.detail.value;
+          c.style.borderColor = on ? 'var(--brand-500)' : 'var(--ink-200)';
+          c.style.background = on ? 'var(--brand-50)' : '#fff';
+        });
+      });
+    },
+  });
+}
+
+/* ============ 弹窗：标记伪线索 ============ */
+function openPseudo(name) {
+  openModal({
+    title: '标记为伪线索',
+    sub: `线索：${name}`,
+    size: 'sm',
+    body: `
+      <div class="alert alert-danger u-mb-16">
+        <span class="alert-icon">${icon('alert', 17)}</span>
+        <div>伪线索为<b>终态不可恢复</b>，不计入转化率分子与分母，但会保留全部历史跟进记录。</div>
+      </div>
+      <div class="field">
+        <label class="field-label">伪线索原因 <span class="req">*</span></label>
+        <select class="select" id="pseudoReason" onchange="toggleOther()">
+          <option>空号 / 停机</option>
+          <option>非目标人群</option>
+          <option>重复线索</option>
+          <option>竞对</option>
+          <option>无真实需求</option>
+          <option>明确拒绝</option>
+          <option>其他</option>
+        </select>
+      </div>
+      <div class="field u-mt-16" id="otherWrap">
+        <label class="field-label">备注说明 <span class="req">*</span></label>
+        <textarea class="textarea" id="otherNote" placeholder="选择「其他」时必填，≤ 200 字" maxlength="200"></textarea>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-danger" data-modal-close onclick="toast('success','已标记为伪线索，操作已记录日志')">确认标记</button>`,
+    onMount: mask => {
+      toggleOther();
+      mask.querySelector('#pseudoReason').addEventListener('change', toggleOther);
+    },
+  });
+}
+function toggleOther() {
+  const sel = document.getElementById('pseudoReason');
+  if (!sel) return;
+  document.getElementById('otherWrap').classList.toggle('u-hidden', sel.value !== '其他');
+}
+
+/* ============ 弹窗：踢回公海 ============ */
+function openPool(target) {
+  openModal({
+    title: '踢回公海池',
+    sub: `对象：${target}`,
+    size: 'sm',
+    body: `
+      <div class="field">
+        <label class="field-label">踢回原因 <span class="req">*</span></label>
+        <select class="select" id="poolReason" onchange="document.getElementById('poolNoteWrap').classList.toggle('u-hidden', this.value!=='其他')">
+          <option>长期未跟进</option>
+          <option>无真实意向</option>
+          <option>联系方式失效</option>
+          <option>客户已成交他处</option>
+          <option>主动放弃</option>
+          <option>离职调岗</option>
+          <option>其他</option>
+        </select>
+      </div>
+      <div class="field u-mt-16 u-hidden" id="poolNoteWrap">
+        <label class="field-label">备注 <span class="req">*</span></label>
+        <textarea class="textarea" placeholder="选择「其他」时必填" maxlength="200"></textarea>
+      </div>
+      <div class="alert alert-info u-mt-16">
+        <span class="alert-icon">${icon('info', 16)}</span>
+        <div>踢回后<b>归属人清空</b>并进入公海，全员可见可领取；原跟进记录与历史归属轨迹保留。
+        被领取后 <b>15 天</b>未跟进将自动回收至公海。</div>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','已踢回公海池，数据全员可见')">确认踢回</button>`,
+  });
+}
+
+/* ============ 弹窗：领取 ============ */
+function claimLead(name) {
+  confirmModal({
+    title: '从公海领取线索',
+    tone: 'info',
+    okText: '确认领取',
+    message: `即将领取「<b>${name}</b>」的线索作为我的归属数据。<br>
+              领取为<b>原子操作</b>，其他同事将立即不可见；15 天内未跟进会自动回收。`,
+    onOk: () => {
+      const row = [...document.querySelectorAll('#leadBody tr')].find(tr => tr.textContent.includes(name));
+      if (row) {
+        row.classList.remove('row-muted');
+        row.innerHTML = row.innerHTML.replace('公海池', '待跟进').replace(
+          /<td class="col-actions">[\s\S]*?<\/td>/,
+          `<td class="col-actions"><div class="link-actions">
+            <span onclick="location.href='lead-detail.html'">详情</span>
+            <span onclick="location.href='lead-detail.html#follow'">跟进</span>
+            <span onclick="toast('info','原型演示')">更多</span></div></td>`);
+      }
+      toast('success', `已领取「${name}」，请在 24 小时内完成首次跟进`);
+    },
+  });
+}
+</script>
+</body>
+</html>

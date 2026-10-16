@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商机详情 · 轻客管家</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .opp-hero {
+    padding: 20px; border-radius: var(--radius);
+    background: linear-gradient(120deg, #eef4ff, #f5f3ff);
+    border: 1px solid var(--brand-100); margin-bottom: 14px;
+  }
+  .opp-amount { font-size: 30px; font-weight: 700; color: var(--danger-500); line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .stage-track { display: flex; align-items: center; gap: 0; margin-top: 4px; }
+  .stage-node {
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    flex: 1; position: relative;
+  }
+  .stage-circle {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff; border: 2px solid var(--ink-300); color: var(--ink-400);
+    z-index: 1; transition: var(--transition);
+  }
+  .stage-node.done .stage-circle { background: var(--success-500); border-color: var(--success-500); color: #fff; }
+  .stage-node.current .stage-circle {
+    background: var(--brand-500); border-color: var(--brand-500); color: #fff;
+    box-shadow: 0 0 0 5px rgba(58,99,240,.16);
+  }
+  .stage-node::before {
+    content: ''; position: absolute; top: 17px; left: -50%;
+    width: 100%; height: 2px; background: var(--ink-200); z-index: 0;
+  }
+  .stage-node:first-child::before { display: none; }
+  .stage-node.done::before, .stage-node.current::before { background: var(--success-500); }
+  .stage-label { font-size: 12.5px; color: var(--ink-500); white-space: nowrap; }
+  .stage-node.current .stage-label { color: var(--brand-700); font-weight: 600; }
+  .stage-node.done .stage-label { color: var(--ink-600); }
+  .stage-time { font-size: 11px; color: var(--ink-400); }
+
+  .detail-grid { display: grid; gap: 14px; grid-template-columns: 1fr 340px; align-items: start; }
+  @media (max-width: 1200px) { .detail-grid { grid-template-columns: 1fr; } }
+
+  .action-panel { padding: 16px 20px; border-bottom: 1px solid var(--ink-100); }
+  .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+  @media (max-width: 900px) { .action-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .amount-history-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 0; border-bottom: 1px dashed var(--ink-100); font-size: 12.5px;
+  }
+  .amount-history-item:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main-area">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">
+            商机详情
+            <span class="u-muted-sm" style="font-weight:400;font-size:14px">OPP2026100801</span>
+          </h1>
+          <p class="page-desc">赢单 / 输单为终态不可回退 · 阶段推进会重置阶段停留计时 · 金额变更保留历史记录</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="btnBack">返回列表</button>
+          <button class="btn" data-min="SALES_MANAGER" onclick="toast('info','原型演示：分配给其他顾问')">分配</button>
+          <button class="btn" id="btnPool">踢回公海</button>
+          <button class="btn btn-danger" id="btnLost">标记输单</button>
+          <button class="btn btn-success" id="btnWon">标记赢单</button>
+        </div>
+      </div>
+
+      <!-- 商机头部 -->
+      <div class="opp-hero">
+        <div class="u-between u-mb-16" style="align-items:flex-start;flex-wrap:wrap;gap:16px">
+          <div>
+            <div class="u-center u-gap-10" style="flex-wrap:wrap">
+              <span style="font-size:20px;font-weight:700;color:var(--ink-900)">林雅琴-Python数据分析训练营</span>
+              <span class="tag tag-warning" id="stageTag">谈判中</span>
+              <span class="tag tag-danger">阶段超期 9 天</span>
+            </div>
+            <div class="u-muted-sm u-mt-8" style="display:flex;gap:18px;flex-wrap:wrap">
+              <span>客户：林雅琴</span>
+              <span class="masked-phone" data-phone="13812345678">
+                <span class="phone-text">138****5678</span>
+                <span class="eye-btn" style="margin-left:4px" data-icon="eye" data-size="14"></span>
+              </span>
+              <span>归属人：王小雨</span>
+              <span>部门：华东销售部 · 一组</span>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div class="u-muted-sm">商机金额</div>
+            <div class="opp-amount">¥6,800</div>
+            <div class="u-muted-sm u-mt-4">预计成交：2026-10-24</div>
+          </div>
+        </div>
+
+        <!-- 阶段进度 -->
+        <div class="stage-track">
+          <div class="stage-node done">
+            <div class="stage-circle" data-icon="check" data-size="17" data-stroke="3"></div>
+            <div class="stage-label">待跟进</div>
+            <div class="stage-time">10-08</div>
+          </div>
+          <div class="stage-node done">
+            <div class="stage-circle" data-icon="check" data-size="17" data-stroke="3"></div>
+            <div class="stage-label">跟进中</div>
+            <div class="stage-time">10-09</div>
+          </div>
+          <div class="stage-node current">
+            <div class="stage-circle">3</div>
+            <div class="stage-label">谈判中</div>
+            <div class="stage-time">已停留 9 天</div>
+          </div>
+          <div class="stage-node">
+            <div class="stage-circle">4</div>
+            <div class="stage-label">赢单</div>
+            <div class="stage-time">—</div>
+          </div>
+          <div class="stage-node">
+            <div class="stage-circle">5</div>
+            <div class="stage-label">输单</div>
+            <div class="stage-time">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 超期预警条 -->
+      <div class="alert alert-warning u-mb-16">
+        <span class="alert-icon" data-icon="alert" data-size="16"></span>
+        <div>
+          <b>阶段停留超期提醒</b>：当前「谈判中」阶段已停留 <b>9 天</b>，超过阈值 7 天，系统已自动推送提醒至主管。
+          请尽快推进或说明原因。
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <!-- 左侧 -->
+        <div>
+          <!-- 操作面板 -->
+          <div class="card" id="advance">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar"></span>阶段操作</div>
+              <span class="u-muted-sm">合法流转：跟进中 → 谈判中 → 赢单 / 输单</span>
+            </div>
+            <div class="action-panel">
+              <div class="action-grid">
+                <button class="btn btn-primary" id="btnAddFollow">添加跟进记录</button>
+                <button class="btn" id="btnToNegotiating">推进到「谈判中」</button>
+                <button class="btn btn-success" onclick="openWon()">标记赢单</button>
+                <button class="btn btn-danger" onclick="openLost()">标记输单</button>
+              </div>
+              <div class="u-muted-sm u-mt-12">
+                当前阶段「谈判中」不可重复推进；赢单后将<b>自动置为不可编辑</b>并引导转客户。
+              </div>
+            </div>
+          </div>
+
+          <!-- 商机信息 -->
+          <div class="card u-mt-16">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar"></span>商机信息</div>
+              <button class="btn btn-sm" id="btnEdit">编辑</button>
+            </div>
+            <div class="card-body">
+              <div class="desc-list" style="grid-template-columns:repeat(3,1fr)">
+                <div class="desc-item"><span class="desc-label">商机名称</span><span class="desc-value">林雅琴-Python数据分析训练营</span></div>
+                <div class="desc-item"><span class="desc-label">商机编号</span><span class="desc-value u-mono">OPP2026100801</span></div>
+                <div class="desc-item"><span class="desc-label">当前阶段</span><span class="desc-value"><span class="tag tag-warning">谈判中</span></span></div>
+                <div class="desc-item"><span class="desc-label">商机金额</span><span class="desc-value u-danger-text">¥6,800</span></div>
+                <div class="desc-item"><span class="desc-label">预计成交日</span><span class="desc-value u-mono">2026-10-24</span></div>
+                <div class="desc-item"><span class="desc-label">阶段停留</span><span class="desc-value u-danger-text">9 天（阈值 7 天）</span></div>
+                <div class="desc-item"><span class="desc-label">商机来源</span><span class="desc-value">抖音短视频</span></div>
+                <div class="desc-item"><span class="desc-label">来源线索</span><span class="desc-value u-link" onclick="location.href='lead-detail.html'">LD2026101001</span></div>
+                <div class="desc-item"><span class="desc-label">转化耗时</span><span class="desc-value">线索创建 → 转商机 2 天</span></div>
+                <div class="desc-item"><span class="desc-label">关联课程</span><span class="desc-value u-link">Python 数据分析训练营</span></div>
+                <div class="desc-item"><span class="desc-label">下次跟进</span><span class="desc-value">2026-10-10 10:30</span></div>
+                <div class="desc-item"><span class="desc-label">最后跟进</span><span class="desc-value u-mono">2026-10-09 15:20</span></div>
+                <div class="desc-item span-3" style="grid-column:span 3">
+                  <span class="desc-label">商机描述</span>
+                  <span class="desc-value" style="font-weight:400">
+                    3 年财务经验转行数据分析师，预算 7k 以内，决策人为本人。
+                    关注点：零基础可学性、就业辅导、是否支持分期。主要竞品为某在线平台。
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 跟进记录 -->
+          <div class="card u-mt-16">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="title-bar"></span>商机跟进记录
+                <span class="tag tag-default">共 4 条</span>
+              </div>
+              <span class="u-muted-sm">仅可追加，不可编辑删除</span>
+            </div>
+            <div class="card-body">
+              <div class="timeline" id="oppTimeline"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧 -->
+        <div>
+          <!-- 金额历史 -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar" style="background:var(--warning-500)"></span>金额变更历史</div>
+            </div>
+            <div class="card-body">
+              <div class="amount-history-item">
+                <div><div class="u-strong">¥6,800</div><div class="u-muted-sm">王小雨 · 10-08 14:20</div></div>
+                <span class="tag tag-default">当前</span>
+              </div>
+              <div class="amount-history-item">
+                <div><div>¥7,200</div><div class="u-muted-sm">王小雨 · 10-08 10:05</div></div>
+                <span class="u-muted-sm">初始金额</span>
+              </div>
+              <div class="u-muted-sm u-mt-12">
+                金额变更保留历史，用于预测与复盘（BR-O05）
+              </div>
+            </div>
+          </div>
+
+          <!-- 转化客户 -->
+          <div class="card u-mt-16" id="toCustomer">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar" style="background:var(--success-500)"></span>转为客户</div>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-warning u-mb-16">
+                <span class="alert-icon" data-icon="alert" data-size="16"></span>
+                <div>需先<b>标记赢单</b>才允许转客户；转客户后将自动写入客户档案。</div>
+              </div>
+              <div class="u-muted-sm u-mb-16" style="line-height:1.9">
+                <b>转客户后自动继承：</b><br>
+                · 姓名 / 手机号 / 性别<br>
+                · 归属人 / 所属部门<br>
+                · 关联课程 / 成交金额 / 成交日期<br>
+                · 来源渠道 / 来源线索<br>
+                · 客户状态初始为「正常在读」
+              </div>
+              <button class="btn btn-primary btn-block is-disabled" id="btnToCustomer">标记赢单后可转客户</button>
+            </div>
+          </div>
+
+          <!-- 操作日志 -->
+          <div class="card u-mt-16">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar" style="background:var(--ink-400)"></span>操作记录</div>
+            </div>
+            <div class="card-body" style="max-height:280px;overflow-y:auto">
+              <div class="timeline">
+                <div class="timeline-item">
+                  <span class="timeline-dot is-warning"></span>
+                  <div class="timeline-head"><span class="timeline-title" style="font-size:12.5px">阶段推进至「谈判中」</span><span class="timeline-time">10-09 15:25</span></div>
+                  <div class="timeline-meta"><span>王小雨</span></div>
+                </div>
+                <div class="timeline-item">
+                  <span class="timeline-dot is-brand"></span>
+                  <div class="timeline-head"><span class="timeline-title" style="font-size:12.5px">追加跟进记录</span><span class="timeline-time">10-09 15:20</span></div>
+                  <div class="timeline-meta"><span>王小雨</span></div>
+                </div>
+                <div class="timeline-item">
+                  <span class="timeline-dot is-warning"></span>
+                  <div class="timeline-head"><span class="timeline-title" style="font-size:12.5px">修改商机金额 ¥7,200 → ¥6,800</span><span class="timeline-time">10-08 14:20</span></div>
+                  <div class="timeline-meta"><span>王小雨</span></div>
+                </div>
+                <div class="timeline-item">
+                  <span class="timeline-dot is-success"></span>
+                  <div class="timeline-head"><span class="timeline-title" style="font-size:12.5px">由线索 LD2026101001 转换创建</span><span class="timeline-time">10-08 14:05</span></div>
+                  <div class="timeline-meta"><span>王小雨</span><span>转化耗时 2 天</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+initPage({
+  key: 'opportunity',
+  breadcrumb: [
+    { text: '首页', href: 'dashboard.html' },
+    { text: '商机管理', href: 'opportunities.html' },
+    { text: '商机详情' },
+  ]
+});
+hydrateIcons(document);
+bindPhoneEyes(document);
+</script>
+
+<script>
+/* ============ 跟进时间轴 ============ */
+const OPP_FOLLOWS = [
+  { title: '电话跟进 · 报价方案沟通', result: '有意向', dot: 'is-brand', time: '10-09 15:20', by: '王小雨',
+    content: '已报价 ¥6,800（含就业辅导），学员认可但希望分期。对比了某平台 5,800 的方案，主要顾虑是担心学完找不到工作。',
+    meta: ['时长 12 分钟', '下一步：确认分期方案'] },
+  { title: '阶段推进 · 转入谈判中', result: '', dot: 'is-warning', time: '10-09 15:25', by: '王小雨',
+    content: '报价方案已发出，学员进入比价阶段，阶段停留计时重置。', meta: ['跟进中 → 谈判中'] },
+  { title: '微信沟通 · 发送就业案例', result: '已加微信', dot: 'is-brand', time: '10-08 16:40', by: '王小雨',
+    content: '发送了 3 位往期学员就业案例（薪资 15-22K），学员回复认可课程但仍在对比。', meta: ['发送 3 个文件'] },
+  { title: '系统 · 由线索转换创建', result: '', dot: 'is-success', time: '10-08 14:05', by: '王小雨',
+    content: '由线索 LD2026101001（林雅琴）转换而来，跟进记录在转换点分界，商机跟进独立起算。',
+    meta: ['转化耗时 2 天', '来源渠道：抖音短视频'] },
+];
+
+document.getElementById('oppTimeline').innerHTML = OPP_FOLLOWS.map(f => `
+  <div class="timeline-item">
+    <span class="timeline-dot ${f.dot}"></span>
+    <div class="timeline-head">
+      <span class="timeline-title">${f.title}</span>
+      ${f.result ? `<span class="tag ${f.result === '有意向' ? 'tag-success' : 'tag-brand'}">${f.result}</span>` : ''}
+      <span class="timeline-time">${f.time}</span>
+    </div>
+    <div class="timeline-body">${f.content}</div>
+    <div class="timeline-meta">
+      <span>${icon('users', 12)} ${f.by}</span>
+      ${f.meta.map(m => `<span>${m}</span>`).join('')}
+    </div>
+  </div>`).join('');
+
+/* ============ 阶段操作 ============ */
+document.getElementById('btnAddFollow').addEventListener('click', () => {
+  openDrawer({
+    title: '添加商机跟进记录',
+    sub: '保存后更新最后跟进时间与下次动作',
+    body: `<div class="form-grid">
+      <div class="field">
+        <label class="field-label">跟进方式 <span class="req">*</span></label>
+        <select class="select"><option>电话</option><option>微信</option><option>面谈</option><option>其他</option></select>
+      </div>
+      <div class="field">
+        <label class="field-label">阶段推进至</label>
+        <select class="select"><option>保持当前（谈判中）</option><option>赢单</option><option>输单</option></select>
+      </div>
+      <div class="field col-span-2">
+        <label class="field-label">跟进内容 <span class="req">*</span></label>
+        <textarea class="textarea" style="min-height:100px" placeholder="10 - 1000 字"></textarea>
+      </div>
+      <div class="field col-span-2">
+        <label class="field-label">下一步计划</label>
+        <input class="input" placeholder="如：确认分期方案并发送合同">
+      </div>
+      <div class="field col-span-2">
+        <label class="field-label">下次跟进时间</label>
+        <input type="datetime-local" class="input">
+      </div>
+    </div>`,
+    footer: `<button class="btn" data-drawer-close>取消</button>
+             <button class="btn btn-primary" data-drawer-close onclick="toast('success','跟进记录已保存')">保存</button>`,
+  });
+});
+
+document.getElementById('btnToNegotiating').addEventListener('click', () => {
+  confirmModal({
+    title: '推进阶段',
+    okText: '确认推进',
+    message: `当前阶段为「谈判中」，无法再次推进到同阶段。<br>
+              合法动作为：<b>标记赢单</b> / <b>标记输单</b> / <b>踢回公海</b>。`,
+    onOk: () => {},
+  });
+});
+
+/* ============ 赢单 ============ */
+function openWon() {
+  openModal({
+    title: '标记赢单',
+    sub: '赢单为终态，不可回退',
+    size: 'sm',
+    body: `
+      <div class="alert alert-success u-mb-16">
+        <span class="alert-icon">${icon('checkCircle', 17)}</span>
+        <div>标记赢单后：阶段置为<b>已赢单</b>并<b>自动置为不可编辑</b>，同时触发转客户引导。</div>
+      </div>
+      <div class="form-grid">
+        <div class="field col-span-2">
+          <label class="field-label">最终成交金额 <span class="req">*</span></label>
+          <input class="input" type="number" value="6800">
+          <div class="field-hint">如与商机金额不一致，将记录金额变更历史</div>
+        </div>
+        <div class="field col-span-2">
+          <label class="field-label">成交日期 <span class="req">*</span></label>
+          <input type="date" class="input" value="2026-10-10">
+        </div>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-success" data-modal-close onclick="wonDone()">确认赢单</button>`,
+  });
+}
+function wonDone() {
+  document.getElementById('stageTag').outerHTML = '<span class="tag tag-success" id="stageTag">已赢单</span>';
+  const over = document.querySelector('.opp-hero .tag-danger');
+  if (over) over.remove();
+  const btn = document.getElementById('btnToCustomer');
+  btn.classList.remove('is-disabled');
+  btn.textContent = '立即转为客户';
+  btn.onclick = openToCustomer;
+  toast('success', '已标记赢单，商机转为不可编辑状态，可继续转客户');
+}
+document.getElementById('btnWon').addEventListener('click', openWon);
+
+/* ============ 输单 ============ */
+function openLost() {
+  openModal({
+    title: '标记输单',
+    sub: '输单为终态，需填写原因用于分析',
+    size: 'sm',
+    body: `
+      <div class="alert alert-danger u-mb-16">
+        <span class="alert-icon">${icon('alert', 17)}</span>
+        <div>输单原因为<b>必填</b>，将用于看板的输单原因分布分析（BR-O02）。</div>
+      </div>
+      <div class="field">
+        <label class="field-label">输单原因 <span class="req">*</span></label>
+        <select class="select" id="lostReason" onchange="document.getElementById('lostNoteWrap').classList.toggle('u-hidden', this.value!=='其他')">
+          <option>价格超预算</option><option>排期冲突</option><option>竞品胜出</option>
+          <option>资质不满足</option><option>学员放弃</option><option>联系不上</option><option>其他</option>
+        </select>
+      </div>
+      <div class="field u-mt-16 u-hidden" id="lostNoteWrap">
+        <label class="field-label">补充说明 <span class="req">*</span></label>
+        <textarea class="textarea" maxlength="200" placeholder="选择「其他」时必填"></textarea>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-danger" data-modal-close onclick="lostDone()">确认输单</button>`,
+  });
+}
+function lostDone() {
+  document.getElementById('stageTag').outerHTML = '<span class="tag tag-danger" id="stageTag">已输单</span>';
+  toast('success', '已标记输单，原因已记录用于分布分析');
+}
+document.getElementById('btnLost').addEventListener('click', openLost);
+
+/* ============ 踢回公海 ============ */
+document.getElementById('btnPool').addEventListener('click', () => {
+  openModal({
+    title: '踢回公海池',
+    size: 'sm',
+    body: `
+      <div class="field">
+        <label class="field-label">踢回原因 <span class="req">*</span></label>
+        <select class="select" onchange="document.getElementById('pNote').classList.toggle('u-hidden', this.value!=='其他')">
+          <option>长期未跟进</option><option>无真实意向</option><option>联系方式失效</option>
+          <option>客户已成交他处</option><option>主动放弃</option><option>离职调岗</option><option>其他</option>
+        </select>
+      </div>
+      <div class="field u-mt-16 u-hidden" id="pNote">
+        <label class="field-label">备注 <span class="req">*</span></label>
+        <textarea class="textarea" maxlength="200"></textarea>
+      </div>
+      <div class="alert alert-info u-mt-16">
+        <span class="alert-icon">${icon('info', 16)}</span>
+        <div>归属人清空，阶段<b>回退至「跟进中」</b>并进入公海；阶段停留天数<b>继续累计</b>不重置。</div>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','已踢回公海，阶段回退至跟进中')">确认踢回</button>`,
+  });
+});
+
+/* ============ 转客户 ============ */
+function openToCustomer() {
+  openModal({
+    title: '商机转为客户',
+    sub: '前置校验：商机阶段为已赢单 ✓',
+    size: 'lg',
+    body: `
+      <div class="alert alert-success u-mb-16">
+        <span class="alert-icon">${icon('checkCircle', 17)}</span>
+        <div>前置校验已通过：① 阶段为已赢单 ✓　② 客户不存在（按手机号 + 姓名查重）✓　③ 关联课程有效 ✓</div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label class="field-label">客户姓名</label><input class="input" value="林雅琴" disabled></div>
+        <div class="field"><label class="field-label">客户手机号</label><input class="input" value="138****5678" disabled></div>
+        <div class="field"><label class="field-label">关联课程</label><input class="input" value="Python 数据分析训练营" disabled></div>
+        <div class="field"><label class="field-label">成交金额</label><input class="input" value="¥6,800" disabled></div>
+        <div class="field"><label class="field-label">成交日期</label><input class="input" value="2026-10-10" disabled></div>
+        <div class="field"><label class="field-label">客户状态</label><input class="input" value="正常在读（初始）" disabled></div>
+        <div class="field col-span-2">
+          <label class="field-label">补充客户档案（可后续完善）</label>
+          <textarea class="textarea" placeholder="如：服务班次 / 校区 / 紧急联系人等，转客户后仍可继续补充"></textarea>
+        </div>
+      </div>
+      <div class="alert alert-info u-mt-16">
+        <span class="alert-icon">${icon('info', 16)}</span>
+        <div>转客户为<b>原子操作</b>，失败整体回滚不产生孤立数据；同时触发<b>渠道成本归集</b>，用于 ROI 核算。</div>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-success" data-modal-close onclick="toast('success','转客户成功，已写入客户档案并触发渠道成本归集')">确认转客户</button>`,
+  });
+}
+
+/* ============ 其他 ============ */
+document.getElementById('btnBack').addEventListener('click', () => location.href = 'opportunities.html');
+document.getElementById('btnEdit').addEventListener('click', () => toast('info', '原型演示：进入商机编辑态'));
+</script>
+</body>
+</html>

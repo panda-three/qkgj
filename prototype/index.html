@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>轻客管家 · 原型总览</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body style="background:var(--ink-50)">
+<div class="proto-page">
+
+  <div class="proto-hero">
+    <span class="proto-badge" id="heroBadge">页面原型 · HTML + CSS</span>
+    <h1 class="proto-title">轻客管家 · 页面原型</h1>
+    <p class="proto-desc">
+      面向互联网教育机构的智能 CRM。以「线索 → 商机 → 客户」为主线，
+      覆盖公海池、部门权限体系与课程资源管理，用漏斗数据驱动转化决策。<br>
+      本原型基于《功能需求文档 V1.0》构建，用于验证页面布局与交互流程。
+    </p>
+    <div class="proto-meta">
+      <div class="proto-meta-item"><strong>11</strong>个页面</div>
+      <div class="proto-meta-item"><strong>3</strong>类角色视角</div>
+      <div class="proto-meta-item"><strong>40</strong>条业务规则映射</div>
+      <div class="proto-meta-item"><strong>P0</strong>核心转化闭环</div>
+    </div>
+    <div class="u-center u-gap-12 u-mt-24" style="justify-content:center">
+      <a class="btn btn-primary btn-lg" href="login.html">从登录页开始体验 →</a>
+      <a class="btn btn-lg" href="dashboard.html">直接进入数据看板</a>
+    </div>
+  </div>
+
+  <h2 class="proto-section-title"><span data-ico="grid"></span> 01 · 登录与首页</h2>
+  <div class="proto-grid" id="group1"></div>
+
+  <h2 class="proto-section-title"><span data-ico="leads"></span> 02 · 线索与公海（核心转化入口）</h2>
+  <div class="proto-grid" id="group2"></div>
+
+  <h2 class="proto-section-title"><span data-ico="opportunity"></span> 03 · 商机与客户（成交闭环）</h2>
+  <div class="proto-grid" id="group3"></div>
+
+  <h2 class="proto-section-title"><span data-ico="settings"></span> 04 · 资源与系统管理</h2>
+  <div class="proto-grid" id="group4"></div>
+
+  <h2 class="proto-section-title"><span data-ico="info"></span> 原型说明</h2>
+  <div class="card">
+    <div class="card-body">
+      <div class="grid grid-2" style="gap:20px">
+        <div>
+          <div class="u-strong u-mb-8">已实现的交互</div>
+          <ul style="font-size:13px;color:var(--ink-600);line-height:2">
+            <li>· 侧边导航 + 面包屑 + 全局搜索的框架式布局</li>
+            <li>· <b>右上角角色切换</b>：超管 / 主管 / 顾问，菜单与按钮按权限矩阵实时变化</li>
+            <li>· 列表筛选、列配置、批量选择、分页、排序</li>
+            <li>· 弹窗（新建/分配/标记伪线索/转商机）、抽屉（跟进记录）</li>
+            <li>· 手机号脱敏与「查看完整手机号」留痕提示</li>
+            <li>· SVG 折线图 / 环形图 / 转化漏斗 / 阶段看板拖拽</li>
+          </ul>
+        </div>
+        <div>
+          <div class="u-strong u-mb-8">原型边界</div>
+          <ul style="font-size:13px;color:var(--ink-600);line-height:2">
+            <li>· 纯静态 HTML + CSS + 原生 JS，<b>无后端与真实数据</b></li>
+            <li>· 数据均为演示用示例，操作不产生真实业务变更</li>
+            <li>· 权限控制在前端演示层面实现，正式版本须由接口层二次校验</li>
+            <li>· 图表为手写 SVG，不依赖任何第三方图表库</li>
+            <li>· 未覆盖：支付、合同签署、外呼系统对接、教学交付</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="u-muted-sm u-mt-24" style="text-align:center">
+    轻客管家 · 页面原型 V1.0 ｜ 生成日期：2026-10-10 ｜ 基于《功能需求文档 V1.0》
+  </div>
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+/* 填充标题图标 */
+document.getElementById('heroBadge').insertAdjacentHTML('afterbegin', icon('sparkle', 13));
+document.querySelectorAll('[data-ico]').forEach(el => {
+  el.insertAdjacentHTML('afterbegin', icon(el.dataset.ico, 16));
+  el.style.display = 'inline-flex';
+});
+
+const PAGES = {
+  group1: [
+    { file: 'login.html', icon: 'lock', no: 'P-00', title: '登录页', desc: '账号密码登录、记住登录状态、演示账号入口', tags: ['身份校验', '角色预选'] },
+    { file: 'dashboard.html', icon: 'dashboard', no: 'P-01', title: '数据看板', desc: '8 张核心指标卡、五级转化漏斗、趋势对比、顾问排行、超期预警', tags: ['P0', '看板', '漏斗'] },
+  ],
+  group2: [
+    { file: 'leads.html', icon: 'leads', no: 'P-02', title: '线索列表', desc: '多维筛选、列配置、批量分配/伪线索、导出与四态展示', tags: ['P0', '列表', '批量'] },
+    { file: 'lead-detail.html', icon: 'file', no: 'P-03', title: '线索详情', desc: '基础信息 + 跟进时间轴、分配、转商机、标记伪线索', tags: ['P0', '详情', '跟进'] },
+    { file: 'pool.html', icon: 'pool', no: 'P-04', title: '公海池', desc: '无人持有线索的领取中心，按渠道/课程筛选后一键领取', tags: ['P0', '领取', '回收'] },
+  ],
+  group3: [
+    { file: 'opportunities.html', icon: 'opportunity', no: 'P-05', title: '商机列表 / 阶段看板', desc: '列表与看板双视图切换、阶段拖拽、超期高亮、批量操作', tags: ['P0', '看板视图'] },
+    { file: 'opportunity-detail.html', icon: 'target', no: 'P-06', title: '商机详情', desc: '阶段推进、赢单/输单、踢回公海、转客户全链路操作', tags: ['P0', '状态机'] },
+    { file: 'customers.html', icon: 'customer', no: 'P-07', title: '客户列表', desc: '成交客户检索、剩余服务天数、到期提醒与归档标记', tags: ['P0', '列表'] },
+    { file: 'customer-detail.html', icon: 'award', no: 'P-08', title: '客户档案', desc: '五分区档案、生命周期时间轴、服务记录与状态变更留痕', tags: ['P0', '时间轴'] },
+  ],
+  group4: [
+    { file: 'resources.html', icon: 'course', no: 'P-09', title: '资源管理', desc: '课程 / 活动 / 渠道三个标签页，含渠道 ROI 核算视图', tags: ['P1', '课程', 'ROI'] },
+    { file: 'system.html', icon: 'settings', no: 'P-10', title: '系统管理', desc: '部门树、角色权限矩阵、账号管理、操作日志四模块', tags: ['P1', '权限', '日志'] },
+  ],
+};
+
+Object.keys(PAGES).forEach(g => {
+  document.getElementById(g).innerHTML = PAGES[g].map(p => `
+    <a class="proto-card" href="${p.file}">
+      <span class="proto-card-arrow">${icon('arrowRight', 17)}</span>
+      <div class="proto-card-top">
+        <span class="proto-card-icon">${icon(p.icon, 20)}</span>
+        <div>
+          <div class="proto-card-title">${p.title}</div>
+          <div class="proto-card-no">${p.no}</div>
+        </div>
+      </div>
+      <div class="proto-card-desc">${p.desc}</div>
+      <div class="proto-card-tags">
+        ${p.tags.map(t => `<span class="tag ${t === 'P0' ? 'tag-danger' : 'tag-default'}">${t}</span>`).join('')}
+      </div>
+    </a>`).join('');
+});
+</script>
+</body>
+</html>

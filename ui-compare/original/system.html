@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系统管理 · 轻客管家</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .sys-grid { display: grid; gap: 14px; grid-template-columns: 300px 1fr; align-items: start; }
+  @media (max-width: 1100px) { .sys-grid { grid-template-columns: 1fr; } }
+
+  .perm-cell { display: flex; align-items: center; justify-content: center; }
+  .group-row td {
+    background: var(--ink-50) !important; font-weight: 600;
+    color: var(--ink-700); font-size: 12.5px; padding: 7px 12px;
+  }
+  .account-row { display: flex; align-items: center; gap: 11px; padding: 11px 0; border-bottom: 1px dashed var(--ink-100); }
+  .account-row:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main-area">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">系统管理</h1>
+          <p class="page-desc">
+            3 个固定角色 · 部门树 + 归属人双维度数据隔离 · 所有写操作与敏感读操作全量留痕
+          </p>
+        </div>
+        <div class="page-actions">
+          <span class="permission-note" id="permTip">
+            <span data-icon="lock" data-size="14"></span>
+            <span>当前角色权限受限，部分模块为只读</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head" style="padding-bottom:0;border-bottom:none">
+          <div class="tabs" data-tabs="sys" style="width:100%">
+            <button class="tab active" data-tab="dept"><span data-icon="tree" data-size="15"></span>部门管理</button>
+            <button class="tab" data-tab="role"><span data-icon="shield" data-size="15"></span>角色权限</button>
+            <button class="tab" data-tab="account"><span data-icon="users" data-size="15"></span>账号管理</button>
+            <button class="tab" data-tab="log"><span data-icon="log" data-size="15"></span>操作日志</button>
+            <button class="tab" data-tab="config"><span data-icon="settings" data-size="15"></span>系统参数</button>
+          </div>
+        </div>
+
+        <!-- 部门管理 -->
+        <div class="tab-panel active" id="panel-sys-dept">
+          <div class="card-body">
+            <div class="sys-grid">
+              <!-- 部门树 -->
+              <div class="card">
+                <div class="card-head">
+                  <div class="card-title"><span class="title-bar"></span>部门树</div>
+                  <button class="btn btn-sm btn-primary u-hidden" data-min="SUPER_ADMIN" id="btnAddDept">+ 新增</button>
+                </div>
+                <div class="card-body" style="max-height:520px;overflow-y:auto">
+                  <div id="deptTree"></div>
+                </div>
+              </div>
+
+              <!-- 部门详情 -->
+              <div class="card">
+                <div class="card-head">
+                  <div>
+                    <div class="card-title"><span class="title-bar" style="background:var(--success-500)"></span>部门详情</div>
+                    <div class="u-muted-sm u-mt-4">选中左侧部门查看详情与下级成员</div>
+                  </div>
+                  <button class="btn btn-sm u-hidden" data-min="SUPER_ADMIN" id="btnEditDept">编辑部门</button>
+                </div>
+                <div class="card-body">
+                  <div class="desc-list">
+                    <div class="desc-item"><span class="desc-label">部门名称</span><span class="desc-value">华东销售部</span></div>
+                    <div class="desc-item"><span class="desc-label">部门编码</span><span class="desc-value u-mono">DEPT-HD</span></div>
+                    <div class="desc-item"><span class="desc-label">负责人</span><span class="desc-value">李文静（销售主管）</span></div>
+                    <div class="desc-item"><span class="desc-label">上级部门</span><span class="desc-value">销售中心</span></div>
+                    <div class="desc-item"><span class="desc-label">排序号</span><span class="desc-value u-mono">10</span></div>
+                    <div class="desc-item"><span class="desc-label">状态</span><span class="desc-value"><span class="tag tag-success">启用</span></span></div>
+                    <div class="desc-item span-2"><span class="desc-label">下级部门</span><span class="desc-value">华东·一组、华东·二组</span></div>
+                    <div class="desc-item span-2"><span class="desc-label">部门说明</span><span class="desc-value" style="font-weight:400">负责华东区域 K12 与成人学历课程的销售转化，覆盖江浙沪地区。</span></div>
+                  </div>
+
+                  <div class="divider"></div>
+
+                  <div class="u-between u-mb-8">
+                    <span class="u-strong" style="font-size:13.5px">部门成员（8 人）</span>
+                    <span class="u-muted-sm">数据权限：本部门及所有子孙部门</span>
+                  </div>
+
+                  <div class="account-row">
+                    <span class="avatar avatar-sm avatar-b">李</span>
+                    <div class="u-flex-1">
+                      <div class="u-strong" style="font-size:13px">李文静 <span class="tag tag-brand" style="margin-left:4px">销售主管</span></div>
+                      <div class="u-muted-sm">负责人 · liwenjing · 138****2231</div>
+                    </div>
+                    <span class="tag tag-success">启用</span>
+                  </div>
+                  <div class="account-row">
+                    <span class="avatar avatar-sm avatar-c">王</span>
+                    <div class="u-flex-1">
+                      <div class="u-strong" style="font-size:13px">王小雨 <span class="tag tag-default" style="margin-left:4px">销售顾问</span></div>
+                      <div class="u-muted-sm">在跟线索 32 · 商机 14 · 20260115 入职</div>
+                    </div>
+                    <span class="tag tag-success">启用</span>
+                  </div>
+                  <div class="account-row">
+                    <span class="avatar avatar-sm avatar-a">陈</span>
+                    <div class="u-flex-1">
+                      <div class="u-strong" style="font-size:13px">陈思远 <span class="tag tag-default" style="margin-left:4px">销售顾问</span></div>
+                      <div class="u-muted-sm">在跟线索 28 · 商机 12 · 20260220 入职</div>
+                    </div>
+                    <span class="tag tag-success">启用</span>
+                  </div>
+                  <div class="account-row">
+                    <span class="avatar avatar-sm avatar-d">赵</span>
+                    <div class="u-flex-1">
+                      <div class="u-strong" style="font-size:13px">赵磊 <span class="tag tag-default" style="margin-left:4px">销售顾问</span></div>
+                      <div class="u-muted-sm">在跟线索 41 · 商机 16 · 20260301 入职</div>
+                    </div>
+                    <span class="tag tag-success">启用</span>
+                  </div>
+
+                  <div class="alert alert-warning u-mt-16">
+                    <span class="alert-icon" data-icon="alert" data-size="16"></span>
+                    <div>
+                      <b>删除约束</b>：部门下有员工或数据时<b>不允许删除</b>，只能停用。<br>
+                      <b>历史数据</b>：部门调整后，历史数据的归属部门<b>保持不变</b>（部门为快照）。
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 角色权限 -->
+        <div class="tab-panel" id="panel-sys-role">
+          <div class="card-body">
+            <div class="alert alert-info u-mb-16">
+              <span class="alert-icon" data-icon="info" data-size="16"></span>
+              <div>
+                本期设定 <b>3 个固定角色</b>，不新增自定义角色以降低权限模型复杂度。
+                权限调整后<b>立即生效</b>，正在操作用户下次请求即按新权限校验；调整行为会记录操作日志。<br>
+                <b>前端按钮隐藏不作为权限控制</b>，后端接口必须独立校验。
+              </div>
+            </div>
+
+            <div class="u-center u-gap-16 u-mb-16" style="flex-wrap:wrap">
+              <span class="u-muted-sm">图例：</span>
+              <span class="legend-item"><span class="perm-mark perm-yes">✓</span><span class="u-muted-sm">允许</span></span>
+              <span class="legend-item"><span class="perm-mark perm-readonly">👁</span><span class="u-muted-sm">只读</span></span>
+              <span class="legend-item"><span class="perm-mark perm-no">✕</span><span class="u-muted-sm">禁止</span></span>
+              <span class="u-right u-muted-sm">共 38 个权限点</span>
+            </div>
+
+            <div class="table-wrap">
+              <table class="table matrix-table">
+                <thead>
+                  <tr>
+                    <th style="min-width:200px">功能点</th>
+                    <th style="width:130px">超级管理员</th>
+                    <th style="width:130px">销售主管</th>
+                    <th style="width:130px">销售顾问</th>
+                  </tr>
+                </thead>
+                <tbody id="permBody"></tbody>
+              </table>
+            </div>
+
+            <div class="alert alert-warning u-mt-16">
+              <span class="alert-icon" data-icon="shield" data-size="16"></span>
+              <div>
+                <b>数据隔离规则</b>：可见数据 = (归属人 == 当前用户) OR (部门 ∈ 可见部门集合 且 数据归属人 ∈ 该部门) OR (数据状态 == 公海)。<br>
+                列表查询在 SQL 层拼接权限条件；详情 / 编辑 / 操作接口<b>二次校验</b>，防止通过直接输入 ID 越权访问。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 账号管理 -->
+        <div class="tab-panel" id="panel-sys-account">
+          <div class="card-body" style="border-bottom:1px solid var(--ink-100)">
+            <div class="u-between" style="flex-wrap:wrap;gap:12px">
+              <div class="u-center u-gap-8">
+                <div class="search-box">
+                  <span class="search-icon" id="aKwIcon"></span>
+                  <input class="input" placeholder="搜索姓名 / 工号 / 手机号" style="min-width:200px">
+                </div>
+                <select class="select" style="width:auto"><option>全部角色</option><option>超级管理员</option><option>销售主管</option><option>销售顾问</option></select>
+                <select class="select" style="width:auto"><option>全部状态</option><option>启用</option><option>停用</option></select>
+              </div>
+              <button class="btn btn-sm btn-primary u-hidden" data-min="SUPER_ADMIN" id="btnAddAccount">+ 新增账号</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>姓名</th><th>工号</th><th>手机号</th><th>所属部门</th><th>角色</th>
+                  <th>名下数据</th><th>状态</th><th>最近登录</th><th style="width:150px">操作</th>
+                </tr>
+              </thead>
+              <tbody id="accBody"></tbody>
+            </table>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-warning">
+              <span class="alert-icon" data-icon="alert" data-size="16"></span>
+              <div><b>停用约束</b>：账号停用后其名下数据<b>自动转入公海</b>，避免数据流失。
+                离职流程：停用账号 → 名下数据转公海 → 保留历史操作记录。</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 操作日志 -->
+        <div class="tab-panel" id="panel-sys-log">
+          <div class="card-body" style="border-bottom:1px solid var(--ink-100)">
+            <div class="u-between" style="flex-wrap:wrap;gap:12px">
+              <div class="u-center u-gap-8">
+                <div class="search-box">
+                  <span class="search-icon" id="lKwIcon"></span>
+                  <input class="input" placeholder="操作人 / 操作对象" style="min-width:200px">
+                </div>
+                <select class="select" style="width:auto"><option>全部操作类型</option><option>新增</option><option>修改</option><option>分配</option><option>状态变更</option><option>导出</option><option>登录</option></select>
+                <select class="select" style="width:auto"><option>全部对象类型</option><option>线索</option><option>商机</option><option>客户</option><option>账号</option></select>
+                <input type="date" class="input" style="width:auto" value="2026-10-01">
+                <span class="u-muted-sm">至</span>
+                <input type="date" class="input" style="width:auto" value="2026-10-10">
+              </div>
+              <span class="u-muted-sm">日志不可删除、不可修改，仅追加</span>
+            </div>
+          </div>
+          <div class="table-wrap" style="max-height:520px;overflow-y:auto">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>操作时间</th><th>操作人</th><th>所属部门</th><th>操作类型</th>
+                  <th>对象类型 / ID</th><th>变更说明</th><th>IP / 设备</th>
+                </tr>
+              </thead>
+              <tbody id="logBody"></tbody>
+            </table>
+          </div>
+          <div class="card-body">
+            <div class="u-strong u-mb-8" style="font-size:13.5px">必记操作范围</div>
+            <div class="u-muted-sm" style="line-height:2">
+              登录 / 登出 / 登录失败　·　新建 / 编辑线索、商机、客户　·　分配 / 踢回公海 / 领取　·
+              状态流转（含转商机、转客户）　·　标记伪线索　·　权限变更 / 账号增删改　·
+              <b style="color:var(--warning-700)">查看完整手机号</b>　·　数据导出（记录范围与条数）　·
+              跟进记录追加（概要记录，不含全文）
+            </div>
+          </div>
+        </div>
+
+        <!-- 系统参数 -->
+        <div class="tab-panel" id="panel-sys-config">
+          <div class="card-body">
+            <div class="alert alert-info u-mb-16">
+              <span class="alert-icon" data-icon="info" data-size="16"></span>
+              <div>系统参数配置为 <b>P2 优先级</b>，此处展示参数项与默认值，正式版可由超管配置化。</div>
+            </div>
+            <div id="configList"></div>
+            <div class="alert alert-warning u-mt-16">
+              <span class="alert-icon" data-icon="alert" data-size="16"></span>
+              <div>参数修改将影响<b>全系统</b>的超期判定与回收策略，请谨慎操作并记录变更原因。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+initPage({
+  key: 'system',
+  breadcrumb: [{ text: '首页', href: 'dashboard.html' }, { text: '系统管理' }]
+});
+['aKwIcon', 'lKwIcon'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = icon('search', 15);
+});
+
+/* 角色提示 */
+function updatePermTip() {
+  const isAdmin = currentRole() === 'SUPER_ADMIN';
+  document.getElementById('permTip').classList.toggle('u-hidden', isAdmin);
+}
+updatePermTip();
+
+/* ============ 部门树 ============ */
+const DEPT_TREE = {
+  name: '轻客教育科技', code: 'ROOT', children: [
+    { name: '总部运营中心', code: 'DEPT-HQ', owner: '张启明', children: [
+      { name: '市场部', code: 'DEPT-MKT' },
+      { name: '教学交付部', code: 'DEPT-EDU' },
+    ]},
+    { name: '销售中心', code: 'DEPT-SC', owner: '李文静', children: [
+      { name: '华东销售部', code: 'DEPT-HD', owner: '李文静', children: [
+        { name: '华东·一组', code: 'DEPT-HD-1', owner: '王小雨' },
+        { name: '华东·二组', code: 'DEPT-HD-2', owner: '赵磊' },
+      ]},
+      { name: '华北销售部', code: 'DEPT-HB', owner: '孙悦', children: [
+        { name: '华北·一组', code: 'DEPT-HB-1', owner: '孙悦' },
+        { name: '华北·二组', code: 'DEPT-HB-2', owner: '吴敏' },
+      ]},
+    ]},
+  ]
+};
+
+function renderTree(node, level = 0) {
+  const hasChild = node.children && node.children.length;
+  const open = level < 2;
+  return `<div class="tree-node">
+    <div class="tree-item ${node.code === 'DEPT-HD' ? 'is-active' : ''}" style="padding-left:${9 + level * 16}px"
+         onclick="event.stopPropagation(); selectDept(this, '${node.name}')">
+      <span class="tree-toggle ${hasChild ? '' : 'is-leaf'} ${open ? 'is-open' : ''}"
+            onclick="event.stopPropagation(); this.parentElement.nextElementSibling.classList.toggle('u-hidden'); this.classList.toggle('is-open')">
+        ${icon('chevronRight', 12, 2.5)}
+      </span>
+      ${level === 0 ? `<span style="color:var(--brand-500)">${icon('layers', 14)}</span>`
+        : level === 1 ? `<span style="color:var(--success-500)">${icon('course', 14)}</span>`
+        : `<span style="color:var(--ink-400)">${icon('users', 14)}</span>`}
+      <span class="u-ellipsis">${node.name}</span>
+      ${node.owner ? `<span class="u-muted-sm" style="margin-left:auto">${node.owner}</span>` : ''}
+    </div>
+    ${hasChild ? `<div class="tree-children ${open ? '' : 'u-hidden'}">${node.children.map(c => renderTree(c, level + 1)).join('')}</div>` : ''}
+  </div>`;
+}
+document.getElementById('deptTree').innerHTML = renderTree(DEPT_TREE);
+
+function selectDept(el, name) {
+  document.querySelectorAll('.tree-item').forEach(t => t.classList.remove('is-active'));
+  el.classList.add('is-active');
+  toast('info', `原型演示：切换到部门「${name}」`);
+}
+
+document.getElementById('btnAddDept').addEventListener('click', () => {
+  openModal({
+    title: '新增部门', size: 'sm',
+    body: `<div class="field"><label class="field-label">部门名称 <span class="req">*</span></label><input class="input"></div>
+      <div class="field u-mt-16"><label class="field-label">上级部门 <span class="req">*</span></label>
+        <select class="select"><option>销售中心</option><option>华东销售部</option><option>华北销售部</option></select></div>
+      <div class="field u-mt-16"><label class="field-label">负责人</label><select class="select"><option value="">不指定</option><option>李文静</option><option>孙悦</option></select></div>
+      <div class="field u-mt-16"><label class="field-label">排序号</label><input class="input" type="number" value="10"></div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','部门创建成功')">创建</button>`,
+  });
+});
+document.getElementById('btnEditDept').addEventListener('click', () => toast('info', '原型演示：编辑部门'));
+
+/* ============ 权限矩阵 ============ */
+const PERMISSIONS = [
+  { group: '线索管理' },
+  { name: '查看线索列表', v: ['✅', '✅ 本部门及下属', '✅ 本人 + 公海'] },
+  { name: '新建线索', v: ['✅', '✅', '✅'] },
+  { name: '编辑线索', v: ['✅', '✅ 本部门及下属', '✅ 仅本人'] },
+  { name: '跟进线索（写记录）', v: ['✅', '✅', '✅'] },
+  { name: '分配线索', v: ['✅', '✅', '❌'] },
+  { name: '伪线索标记', v: ['✅', '✅', '✅ 仅本人'] },
+  { name: '删除线索（软删）', v: ['✅', '❌', '❌'] },
+  { group: '商机管理' },
+  { name: '查看商机列表', v: ['✅', '✅ 本部门及下属', '✅ 本人 + 公海'] },
+  { name: '新建 / 编辑商机', v: ['✅', '✅ 本部门及下属', '✅ 仅本人'] },
+  { name: '跟进商机', v: ['✅', '✅', '✅'] },
+  { name: '分配商机', v: ['✅', '✅', '❌'] },
+  { name: '踢回公海', v: ['✅', '✅', '✅ 本人数据'] },
+  { name: '赢单 / 输单 / 转客户', v: ['✅', '✅', '✅'] },
+  { group: '客户管理' },
+  { name: '查看客户', v: ['✅', '✅ 本部门及下属', '✅ 仅本人'] },
+  { name: '新建客户（手动录入）', v: ['✅', '✅', '❌'] },
+  { name: '编辑客户', v: ['✅', '✅ 本部门及下属', '✅ 仅本人'] },
+  { name: '客户服务与跟进记录', v: ['✅', '✅', '✅'] },
+  { name: '客户导出', v: ['✅', '✅', '❌'] },
+  { group: '资源管理' },
+  { name: '课程 / 活动查看', v: ['✅', '✅', '✅'] },
+  { name: '课程 / 活动增删改', v: ['✅', '❌', '❌'] },
+  { group: '系统管理' },
+  { name: '部门管理', v: ['✅', '👁 本部门', '❌'] },
+  { name: '角色权限查看', v: ['✅', '❌', '❌'] },
+  { name: '账号管理', v: ['✅', '👁 本部门', '❌'] },
+  { name: '操作日志', v: ['✅', '👁 本部门', '❌'] },
+];
+
+function markHtml(v) {
+  if (v === '✅') return '<span class="perm-mark perm-yes">✓</span>';
+  if (v === '❌') return '<span class="perm-mark perm-no">✕</span>';
+  if (v.startsWith('👁')) return `<span class="perm-mark perm-readonly">👁</span><div class="u-muted-sm" style="font-size:11px;margin-top:2px">${v.slice(2).trim()}</div>`;
+  if (v.startsWith('✅ ')) return `<span class="perm-mark perm-yes">✓</span><div class="u-muted-sm" style="font-size:11px;margin-top:2px">${v.slice(2).trim()}</div>`;
+  return `<span class="perm-mark perm-yes">✓</span>`;
+}
+
+document.getElementById('permBody').innerHTML = PERMISSIONS.map(p => {
+  if (p.group) {
+    return `<tr class="group-row"><td colspan="4">${p.group}</td></tr>`;
+  }
+  return `<tr>
+    <td style="text-align:left">${p.name}</td>
+    ${p.v.map(v => `<td>${markHtml(v)}</td>`).join('')}
+  </tr>`;
+}).join('');
+
+/* ============ 账号管理 ============ */
+const ACCOUNTS = [
+  { name: '张启明', code: 'A0001', phone: '13900001111', dept: '总部运营中心', role: '超级管理员', cls: 'avatar-a', data: '全系统', status: '启用', login: '10-10 09:12' },
+  { name: '李文静', code: 'A0102', phone: '13800002222', dept: '华东销售部', role: '销售主管', cls: 'avatar-b', data: '线索 286 · 商机 96', status: '启用', login: '10-10 08:45' },
+  { name: '孙悦', code: 'A0108', phone: '13700003333', dept: '华北销售部', role: '销售主管', cls: 'avatar-e', data: '线索 194 · 商机 68', status: '启用', login: '10-10 08:20' },
+  { name: '王小雨', code: 'A0215', phone: '13600004444', dept: '华东·一组', role: '销售顾问', cls: 'avatar-c', data: '线索 32 · 商机 14', status: '启用', login: '10-10 09:30' },
+  { name: '陈思远', code: 'A0216', phone: '13500005555', dept: '华东·一组', role: '销售顾问', cls: 'avatar-a', data: '线索 28 · 商机 12', status: '启用', login: '10-09 18:24' },
+  { name: '赵磊', code: 'A0217', phone: '13400006666', dept: '华东·二组', role: '销售顾问', cls: 'avatar-d', data: '线索 41 · 商机 16', status: '启用', login: '10-10 07:58' },
+  { name: '周杰', code: 'A0218', phone: '13300007777', dept: '华东·一组', role: '销售顾问', cls: 'avatar-b', data: '线索 19 · 商机 8', status: '启用', login: '10-08 17:40' },
+  { name: '吴敏', code: 'A0231', phone: '13200008888', dept: '华北·二组', role: '销售顾问', cls: 'avatar-f', data: '线索 24 · 商机 9', status: '停用', login: '09-20 16:10' },
+];
+
+document.getElementById('accBody').innerHTML = ACCOUNTS.map(a => `
+  <tr class="${a.status === '停用' ? 'row-muted' : ''}">
+    <td><div class="user-cell">
+      <span class="avatar avatar-sm ${a.cls}">${a.name[0]}</span>
+      <span class="cell-main">${a.name}</span>
+    </div></td>
+    <td><span class="u-mono u-muted-sm">${a.code}</span></td>
+    <td><span class="masked-phone u-mono">${maskPhone(a.phone)}</span></td>
+    <td><span class="u-muted-sm">${a.dept}</span></td>
+    <td><span class="tag ${a.role === '超级管理员' ? 'tag-danger' : a.role === '销售主管' ? 'tag-brand' : 'tag-default'}">${a.role}</span></td>
+    <td><span class="u-muted-sm">${a.data}</span></td>
+    <td>${a.status === '启用' ? '<span class="tag tag-success">启用</span>' : '<span class="tag tag-danger">停用</span>'}</td>
+    <td><span class="u-muted-sm u-mono">${a.login}</span></td>
+    <td class="col-actions">
+      <div class="link-actions" data-min="SUPER_ADMIN">
+        <span onclick="toast('info','原型演示：重置密码')">重置密码</span>
+        <span onclick="toast('info','原型演示：分配角色')">分配角色</span>
+        <span onclick="toast('info','原型演示：${a.status === '启用' ? '停用账号（名下数据将转公海）' : '启用账号'}')"
+              class="${a.status === '启用' ? 'danger' : ''}">${a.status === '启用' ? '停用' : '启用'}</span>
+      </div>
+      <div class="link-actions" style="margin-top:4px">
+        <span onclick="toast('info','原型演示：查看操作日志')">日志</span>
+      </div>
+    </td>
+  </tr>`).join('');
+applyPerms(document.getElementById('accBody'), currentRole());
+
+document.getElementById('btnAddAccount').addEventListener('click', () => {
+  openModal({
+    title: '新增账号', size: 'lg',
+    body: `<div class="form-grid">
+      <div class="field"><label class="field-label">姓名 <span class="req">*</span></label><input class="input"></div>
+      <div class="field"><label class="field-label">工号 <span class="req">*</span></label><input class="input"></div>
+      <div class="field"><label class="field-label">手机号 <span class="req">*</span></label><input class="input" maxlength="11"></div>
+      <div class="field"><label class="field-label">所属部门 <span class="req">*</span></label>
+        <select class="select"><option>华东·一组</option><option>华东·二组</option><option>华北·一组</option></select></div>
+      <div class="field col-span-2"><label class="field-label">角色 <span class="req">*</span></label>
+        <select class="select"><option>销售顾问</option><option>销售主管</option><option>超级管理员</option></select></div>
+      <div class="field col-span-2"><label class="field-label">初始密码</label>
+        <input class="input" value="Qingke@2026">
+        <div class="field-hint">密码策略：8 位以上含大小写字母与数字，首次登录强制改密</div></div>
+    </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','账号创建成功')">创建账号</button>`,
+  });
+});
+
+/* ============ 操作日志 ============ */
+const LOGS = [
+  { time: '10-10 09:32:18', user: '王小雨', dept: '华东·一组', type: '导出', obj: '线索 / LD2026101001', detail: '导出线索 20 条（手机号脱敏）', ip: '192.168.1.106 / Chrome' },
+  { time: '10-10 09:30:02', user: '王小雨', dept: '华东·一组', type: '敏感读取', obj: '线索 / LD2026101001', detail: '查看完整手机号 138****5678', ip: '192.168.1.106 / Chrome' },
+  { time: '10-10 09:28:44', user: '陈思远', dept: '华东·一组', type: '跟进记录', obj: '商机 / OPP2026100703', detail: '追加跟进记录（不含全文）', ip: '192.168.1.112 / Chrome' },
+  { time: '10-10 09:15:20', user: '李文静', dept: '华东销售部', type: '分配', obj: '线索 × 8', detail: '批量分配给王小雨（均衡策略）', ip: '192.168.1.101 / Safari' },
+  { time: '10-10 09:12:03', user: '张启明', dept: '总部运营中心', type: '登录', obj: '账号 / A0001', detail: '登录成功', ip: '10.20.1.5 / Chrome' },
+  { time: '10-10 09:05:51', user: '赵磊', dept: '华东·二组', type: '状态变更', obj: '商机 / OPP2026100602', detail: '跟进中 → 谈判中', ip: '192.168.1.118 / Chrome' },
+  { time: '10-10 08:58:33', user: '陈思远', dept: '华东·一组', type: '伪线索', obj: '线索 / LD2026100988', detail: '标记伪线索，原因：空号/停机', ip: '192.168.1.112 / Chrome' },
+  { time: '10-10 08:45:10', user: '李文静', dept: '华东销售部', type: '登录', obj: '账号 / A0102', detail: '登录成功', ip: '192.168.1.101 / Safari' },
+  { time: '10-10 08:40:27', user: '王小雨', dept: '华东·一组', type: '状态流转', obj: '线索 → 商机', detail: 'LD2026101001 → OPP2026100801', ip: '192.168.1.106 / Chrome' },
+  { time: '10-10 08:22:16', user: '孙悦', dept: '华北销售部', type: '领取', obj: '公海 / LD2026101005', detail: '从公海池领取线索', ip: '192.168.1.124 / Chrome' },
+  { time: '10-10 08:10:02', user: '未知', dept: '—', type: '登录失败', obj: '账号 / admin', detail: '密码错误（第 3 次）', ip: '203.0.113.45 / Safari' },
+];
+
+const LOG_TYPE_TAG = {
+  导出: 'tag-warning', 敏感读取: 'tag-danger', 跟进记录: 'tag-brand', 分配: 'tag-purple',
+  登录: 'tag-success', 状态变更: 'tag-warning', 伪线索: 'tag-default',
+  登录失败: 'tag-danger', 状态流转: 'tag-brand', 领取: 'tag-purple',
+};
+
+document.getElementById('logBody').innerHTML = LOGS.map(l => `
+  <tr class="${l.type === '登录失败' ? 'row-muted' : ''}">
+    <td><span class="u-mono u-muted-sm">${l.time}</span></td>
+    <td><span class="cell-main">${l.user}</span></td>
+    <td><span class="u-muted-sm">${l.dept}</span></td>
+    <td><span class="tag ${LOG_TYPE_TAG[l.type] || 'tag-default'}">${l.type}</span></td>
+    <td><span class="u-mono u-muted-sm">${l.obj}</span></td>
+    <td><span style="font-size:12.5px">${l.detail}</span></td>
+    <td><span class="u-muted-sm u-mono" style="font-size:11.5px">${l.ip}</span></td>
+  </tr>`).join('');
+
+/* ============ 系统参数 ============ */
+const CONFIGS = [
+  { group: '跟进与超期', items: [
+    { key: '线索超时未跟进阈值', value: '24 小时', desc: '超过该时长未跟进即计入超期预警，可按角色配置', p: 'P2' },
+    { key: '首次跟进及时率目标', value: '95%', desc: '用于看板达成率计算' },
+    { key: '超期预警推送渠道', value: '站内 + 企微机器人', desc: '待业务方确认', p: '待确认' },
+  ]},
+  { group: '商机阶段', items: [
+    { key: '跟进中阶段停留阈值', value: '3 天', desc: '超阈值提醒主管' },
+    { key: '谈判中阶段停留阈值', value: '7 天', desc: '超阈值提醒主管' },
+  ]},
+  { group: '公海池', items: [
+    { key: '公海自动回收天数', value: '15 天', desc: '领取后 N 天未跟进自动回收，可配置', p: '待确认' },
+    { key: '领取后首次跟进时限', value: '24 小时', desc: '超时计入新领取提醒' },
+  ]},
+  { group: '数据与安全', items: [
+    { key: '手机号默认脱敏', value: '开启', desc: '非超管默认展示 138****5678', p: '强制' },
+    { key: '导出是否需要审批', value: '否（仅记录日志）', desc: '待业务方确认', p: '待确认' },
+    { key: '会话超时时长', value: '2 小时', desc: '无操作自动登出' },
+    { key: '登录失败锁定策略', value: '5 次 / 锁定 30 分钟', desc: '' },
+  ]},
+];
+
+document.getElementById('configList').innerHTML = CONFIGS.map(g => `
+  <div class="card u-mb-16">
+    <div class="card-head">
+      <div class="card-title"><span class="title-bar" style="background:var(--ink-400)"></span>${g.group}</div>
+    </div>
+    <div class="card-body flush">
+      <table class="table">
+        <tbody>
+          ${g.items.map(it => `
+            <tr>
+              <td style="width:220px"><span class="cell-main">${it.key}</span></td>
+              <td style="width:180px"><span class="u-strong">${it.value}</span>
+                ${it.p ? `<span class="tag ${it.p === '强制' ? 'tag-danger' : it.p === '待确认' ? 'tag-warning' : 'tag-default'}" style="margin-left:6px">${it.p}</span>` : ''}
+              </td>
+              <td><span class="u-muted-sm" style="font-size:12.5px">${it.desc}</span></td>
+              <td style="width:80px" class="u-right" data-min="SUPER_ADMIN">
+                <span class="u-link" style="font-size:12.5px" onclick="toast('info','原型演示：修改参数')">修改</span>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`).join('');
+applyPerms(document.getElementById('configList'), currentRole());
+</script>
+</body>
+</html>

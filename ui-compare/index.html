@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>轻客管家 · 界面对比</title>
+<style>
+  :root {
+    --brand:#3a63f0; --ink-50:#f8fafc; --ink-100:#f1f5f9; --ink-200:#e2e8f0;
+    --ink-400:#94a3b8; --ink-500:#64748b; --ink-600:#475569; --ink-700:#334155;
+    --ink-800:#1e293b; --ink-900:#0f172a;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
+    background:var(--ink-50); color:var(--ink-800); line-height:1.6; padding:40px 24px;
+  }
+  .wrap { max-width:880px; margin:0 auto; }
+  h1 { font-size:26px; font-weight:600; color:var(--ink-900); }
+  .sub { margin-top:6px; color:var(--ink-500); font-size:14px; }
+  .section { margin-top:32px; }
+  .section h2 { font-size:16px; font-weight:600; color:var(--ink-900); margin-bottom:12px; }
+  .cards { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+  .card {
+    display:block; padding:18px; text-decoration:none; color:inherit;
+    border:1px solid var(--ink-200); border-radius:12px; background:#fff;
+    transition:border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .card:hover { border-color:var(--brand); transform:translateY(-2px); box-shadow:0 8px 24px rgb(15 23 42 / 8%); }
+  .card:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+  .badge {
+    display:inline-block; padding:2px 8px; border-radius:999px;
+    font-size:11px; font-weight:500; margin-bottom:10px;
+  }
+  .b-orig { background:#f1f5f9; color:var(--ink-600); }
+  .b-new { background:#eef4ff; color:#1e37ad; }
+  .card h3 { font-size:14.5px; font-weight:600; color:var(--ink-900); }
+  .card p { margin-top:6px; font-size:12.5px; color:var(--ink-500); }
+  .points { margin-top:10px; padding-top:10px; border-top:1px solid var(--ink-100); }
+  .points li { font-size:12px; color:var(--ink-600); margin-left:16px; margin-top:3px; }
+  .note {
+    margin-top:28px; padding:14px 16px; border-radius:10px;
+    background:#fffbeb; border:1px solid #fde68a; font-size:12.5px; color:#92400e;
+  }
+  .note b { display:block; margin-bottom:4px; }
+  .foot { margin-top:32px; text-align:center; font-size:12px; color:var(--ink-400); }
+  code { background:var(--ink-100); padding:1px 5px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>轻客管家 · 界面对比</h1>
+  <p class="sub">原始原型与改造版并排对照。改造版针对响应式、交互反馈、无障碍三方面做了重构。</p>
+
+  <div class="section">
+    <h2>线索管理</h2>
+    <div class="cards">
+      <a class="card" href="original/leads.html">
+        <span class="badge b-orig">原始原型</span>
+        <h3>leads.html</h3>
+        <p>静态演示数据，交互为假效果</p>
+        <ul class="points">
+          <li>排序仅切换图标，无真实排序</li>
+          <li>全选仅限当前页，翻页即丢</li>
+          <li>完整手机号直接写在 DOM 属性里</li>
+          <li>无移动端适配，表格需横向滚动</li>
+        </ul>
+      </a>
+      <a class="card" href="redesign/leads.html">
+        <span class="badge b-new">改造版</span>
+        <h3>leads.html</h3>
+        <p>接入真实数据库数据，可操作</p>
+        <ul class="points">
+          <li>真实排序 + 状态指示 + NULL 排后</li>
+          <li>跨页选择保持，显示跨页数</li>
+          <li>手机号脱敏，点击查看并留痕</li>
+          <li>768px 断点：侧栏变抽屉、表格变卡片</li>
+          <li>底部角色切换器，可对比三种权限视角</li>
+        </ul>
+      </a>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>其他页面</h2>
+    <div class="cards">
+      <a class="card" href="original/opportunities.html">
+        <span class="badge b-orig">原始原型</span><h3>商机管理</h3>
+        <p>看板与列表双视图</p>
+      </a>
+      <a class="card" href="original/customers.html">
+        <span class="badge b-orig">原始原型</span><h3>客户管理</h3>
+        <p>客户档案与时间轴</p>
+      </a>
+      <a class="card" href="original/pool.html">
+        <span class="badge b-orig">原始原型</span><h3>公海池</h3>
+        <p>领取与释放</p>
+      </a>
+      <a class="card" href="original/dashboard.html">
+        <span class="badge b-orig">原始原型</span><h3>数据看板</h3>
+        <p>指标卡与转化漏斗</p>
+      </a>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>改造版数据来自真实数据库</b>
+    预览页读取 <code>ui-compare/redesign/data.json</code>，由
+    <code>npm run preview:export</code> 从 PGlite 导出（12 条线索 / 5 个商机 / 3 个客户 / 34 条跟进记录）。
+    修改数据库后重新导出即可刷新预览。
+  </div>
+
+  <p class="foot">轻客管家 · 2026-10-12</p>
+</div>
+</body>
+</html>

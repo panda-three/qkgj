@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客户档案 · 轻客管家</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .detail-grid { display: grid; gap: 14px; grid-template-columns: 1fr 330px; align-items: start; }
+  @media (max-width: 1200px) { .detail-grid { grid-template-columns: 1fr; } }
+
+  .cust-hero {
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 20px; border-bottom: 1px solid var(--ink-100);
+  }
+  .cust-avatar {
+    width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 600; color: #fff;
+    background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  }
+
+  /* 生命周期时间轴 */
+  .life-track { display: flex; align-items: center; gap: 0; margin-bottom: 4px; }
+  .life-node { flex: 1; text-align: center; position: relative; }
+  .life-dot {
+    width: 28px; height: 28px; border-radius: 50%; margin: 0 auto 7px;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff; border: 2px solid var(--ink-300); color: var(--ink-400);
+    position: relative; z-index: 1;
+  }
+  .life-node.done .life-dot { background: var(--success-500); border-color: var(--success-500); color: #fff; }
+  .life-node::before {
+    content: ''; position: absolute; top: 14px; left: -50%;
+    width: 100%; height: 2px; background: var(--ink-200);
+  }
+  .life-node:first-child::before { display: none; }
+  .life-node.done::before { background: var(--success-500); }
+  .life-name { font-size: 12px; color: var(--ink-500); white-space: nowrap; }
+  .life-date { font-size: 11px; color: var(--ink-400); margin-top: 1px; }
+
+  .service-item {
+    display: flex; gap: 12px; padding: 12px 0;
+    border-bottom: 1px dashed var(--ink-100);
+  }
+  .service-item:last-child { border-bottom: none; }
+  .service-icon {
+    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+    background: var(--brand-50); color: var(--brand-500);
+    display: flex; align-items: center; justify-content: center;
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main-area">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">
+            客户档案
+            <span class="u-muted-sm" style="font-weight:400;font-size:14px">CUS2026100801</span>
+          </h1>
+          <p class="page-desc">完整生命周期可追溯：线索来源 → 跟进 → 成交 → 服务</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="btnBack">返回列表</button>
+          <button class="btn" data-min="SALES_MANAGER" onclick="openTransfer()">转移归属</button>
+          <button class="btn" id="btnStatus">变更状态</button>
+          <button class="btn btn-primary" id="btnService">+ 添加服务记录</button>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <!-- 左侧 -->
+        <div>
+          <!-- 档案头 -->
+          <div class="card">
+            <div class="cust-hero">
+              <div class="cust-avatar">冯</div>
+              <div class="u-flex-1" style="min-width:0">
+                <div class="u-center u-gap-10" style="flex-wrap:wrap">
+                  <span style="font-size:19px;font-weight:600;color:var(--ink-900)">冯雅琪</span>
+                  <span class="tag tag-success">正常在读</span>
+                  <span class="tag tag-warning">续费提醒</span>
+                </div>
+                <div class="u-muted-sm u-mt-8 masked-phone" data-phone="15867890123" style="display:flex;align-items:center;gap:6px">
+                  <span class="phone-text">158****0123</span>
+                  <span class="eye-btn" data-icon="eye" data-size="14"></span>
+                  <span>女 · 来源：抖音短视频</span>
+                </div>
+                <div class="u-muted-sm u-mt-4">
+                  关联课程：<span class="u-link">成人学历提升 · 专升本</span>
+                  · 成交 <b class="u-danger-text">¥4,200</b> · 2026-10-08 成交
+                </div>
+              </div>
+            </div>
+
+            <!-- 生命周期 -->
+            <div class="card-body">
+              <div class="u-between u-mb-16">
+                <span class="u-strong" style="font-size:13.5px">客户生命周期</span>
+                <span class="u-muted-sm">从线索来源到当前服务的完整轨迹</span>
+              </div>
+              <div class="life-track">
+                <div class="life-node done">
+                  <div class="life-dot" data-icon="check" data-size="14" data-stroke="3"></div>
+                  <div class="life-name">线索来源</div>
+                  <div class="life-date">08-15</div>
+                </div>
+                <div class="life-node done">
+                  <div class="life-dot" data-icon="check" data-size="14" data-stroke="3"></div>
+                  <div class="life-name">跟进转化</div>
+                  <div class="life-date">09-02</div>
+                </div>
+                <div class="life-node done">
+                  <div class="life-dot" data-icon="check" data-size="14" data-stroke="3"></div>
+                  <div class="life-name">赢单成交</div>
+                  <div class="life-date">10-08</div>
+                </div>
+                <div class="life-node done">
+                  <div class="life-dot" data-icon="check" data-size="14" data-stroke="3"></div>
+                  <div class="life-name">开课服务</div>
+                  <div class="life-date">10-15</div>
+                </div>
+                <div class="life-node">
+                  <div class="life-dot" data-icon="check" data-size="14" data-stroke="3"></div>
+                  <div class="life-name">结课 / 续费</div>
+                  <div class="life-date">2027-04-15</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 档案分区 -->
+          <div class="card u-mt-16">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar"></span>客户档案信息</div>
+              <button class="btn btn-sm" id="btnEdit">编辑基础信息</button>
+            </div>
+            <div class="card-body">
+              <div class="u-strong u-mb-8" style="font-size:13px">① 基本信息</div>
+              <div class="desc-list" style="grid-template-columns:repeat(3,1fr)">
+                <div class="desc-item"><span class="desc-label">姓名</span><span class="desc-value">冯雅琪</span></div>
+                <div class="desc-item"><span class="desc-label">手机号</span><span class="desc-value masked-phone" data-phone="15867890123"><span class="phone-text">158****0123</span> <span class="eye-btn" data-icon="eye" data-size="14"></span></span></div>
+                <div class="desc-item"><span class="desc-label">性别</span><span class="desc-value">女</span></div>
+                <div class="desc-item"><span class="desc-label">来源渠道</span><span class="desc-value">抖音短视频</span></div>
+                <div class="desc-item"><span class="desc-label">来源线索</span><span class="desc-value u-link u-mono" style="font-size:12.5px" onclick="location.href='lead-detail.html'">LD2026101006</span></div>
+                <div class="desc-item"><span class="desc-label">来源商机</span><span class="desc-value u-link u-mono" style="font-size:12.5px" onclick="location.href='opportunity-detail.html'">OPP2026100602</span></div>
+              </div>
+
+              <div class="divider"></div>
+              <div class="u-strong u-mb-8" style="font-size:13px">② 成交信息</div>
+              <div class="desc-list" style="grid-template-columns:repeat(3,1fr)">
+                <div class="desc-item"><span class="desc-label">关联课程</span><span class="desc-value u-link">成人学历提升 · 专升本</span></div>
+                <div class="desc-item"><span class="desc-label">成交金额</span><span class="desc-value u-danger-text">¥4,200</span></div>
+                <div class="desc-item"><span class="desc-label">成交日期</span><span class="desc-value u-mono">2026-10-08</span></div>
+                <div class="desc-item"><span class="desc-label">归属人</span><span class="desc-value">赵磊</span></div>
+                <div class="desc-item"><span class="desc-label">所属部门</span><span class="desc-value">华东销售部 · 二组</span></div>
+                <div class="desc-item"><span class="desc-label">渠道成本归集</span><span class="desc-value">¥680（已归集）</span></div>
+              </div>
+
+              <div class="divider"></div>
+              <div class="u-strong u-mb-8" style="font-size:13px">③ 服务信息</div>
+              <div class="desc-list" style="grid-template-columns:repeat(3,1fr)">
+                <div class="desc-item"><span class="desc-label">服务开始日</span><span class="desc-value u-mono">2026-10-15</span></div>
+                <div class="desc-item"><span class="desc-label">服务到期日</span><span class="desc-value u-mono">2027-04-15</span></div>
+                <div class="desc-item"><span class="desc-label">剩余天数</span><span class="desc-value u-success-text">182 天</span></div>
+                <div class="desc-item"><span class="desc-label">服务班次</span><span class="desc-value">周末直播班（待补充）</span></div>
+                <div class="desc-item"><span class="desc-label">校区</span><span class="desc-value">线上（待补充）</span></div>
+                <div class="desc-item"><span class="desc-label">最后服务时间</span><span class="desc-value u-mono">2026-10-09</span></div>
+              </div>
+              <div class="alert alert-info u-mt-12">
+                <span class="alert-icon" data-icon="info" data-size="16"></span>
+                <div>客户信息可在客户模块<b>继续补充完善</b>（BR-T02）；关键字段「成交金额 / 成交日期」的修改需<b>超管权限</b>。</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 统一时间轴 -->
+          <div class="card u-mt-16">
+            <div class="tabs" data-tabs="cust">
+              <button class="tab active" data-tab="all">全部记录</button>
+              <button class="tab" data-tab="follow">跟进记录 <span class="badge-count is-muted">3</span></button>
+              <button class="tab" data-tab="service">服务记录 <span class="badge-count is-muted">4</span></button>
+              <button class="tab" data-tab="change">状态变更 <span class="badge-count is-muted">2</span></button>
+            </div>
+            <div class="card-body" data-tab-panels="cust">
+              <div class="tab-panel active" id="panel-cust-all"><div class="timeline" id="tlAll"></div></div>
+              <div class="tab-panel" id="panel-cust-follow"><div class="timeline" id="tlFollow"></div></div>
+              <div class="tab-panel" id="panel-cust-service"><div id="svcList"></div></div>
+              <div class="tab-panel" id="panel-cust-change"><div class="timeline" id="tlChange"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧 -->
+        <div>
+          <!-- 快捷操作 -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar" style="background:var(--warning-500)"></span>快捷操作</div>
+            </div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn btn-primary btn-block" onclick="openService()">添加服务记录</button>
+              <button class="btn btn-block" onclick="openFollow()">添加跟进记录</button>
+              <button class="btn btn-block" onclick="openStatus()">变更客户状态</button>
+              <button class="btn btn-block" onclick="toast('info','原型演示：设置续费提醒')">设置续费提醒</button>
+              <button class="btn btn-block" onclick="toast('info','原型演示：复购提醒')">设置复购提醒</button>
+            </div>
+          </div>
+
+          <!-- 服务进度 -->
+          <div class="card u-mt-16">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar" style="background:var(--success-500)"></span>服务进度</div>
+            </div>
+            <div class="card-body">
+              <div class="u-between u-mb-8">
+                <span class="u-muted-sm">已服务时长</span>
+                <span class="u-strong u-mono">14 / 182 天</span>
+              </div>
+              <div class="progress progress-lg"><div class="progress-bar is-success" style="width:7.7%"></div></div>
+              <div class="u-muted-sm u-mt-8">剩余 182 天，预计到期 2027-04-15</div>
+              <div class="divider"></div>
+              <div class="info-row"><span class="ir-label">累计服务次数</span><span class="ir-value">4 次</span></div>
+              <div class="info-row"><span class="ir-label">累计服务时长</span><span class="ir-value">18.5 小时</span></div>
+              <div class="info-row"><span class="ir-label">服务异常记录</span><span class="ir-value u-success-text">0 次</span></div>
+              <div class="info-row"><span class="ir-label">客户满意度</span><span class="ir-value">★★★★★ 5.0</span></div>
+            </div>
+          </div>
+
+          <!-- 附件 -->
+          <div class="card u-mt-16">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar" style="background:var(--ink-400)"></span>附件资料</div>
+              <span class="u-muted-sm">3 个</span>
+            </div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+              <div class="attachment">
+                <span class="att-icon" data-icon="file" data-size="15"></span>
+                <div class="u-flex-1" style="min-width:0">
+                  <div class="u-ellipsis" style="font-size:13px;font-weight:500">课程服务合同.pdf</div>
+                  <div class="u-muted-sm">2.1 MB · 10-08</div>
+                </div>
+              </div>
+              <div class="attachment">
+                <span class="att-icon" data-icon="file" data-size="15"></span>
+                <div class="u-flex-1" style="min-width:0">
+                  <div class="u-ellipsis" style="font-size:13px;font-weight:500">付款凭证.jpg</div>
+                  <div class="u-muted-sm">684 KB · 10-08</div>
+                </div>
+              </div>
+              <div class="attachment">
+                <span class="att-icon" data-icon="file" data-size="15"></span>
+                <div class="u-flex-1" style="min-width:0">
+                  <div class="u-ellipsis" style="font-size:13px;font-weight:500">报名资料表.xlsx</div>
+                  <div class="u-muted-sm">96 KB · 10-08</div>
+                </div>
+              </div>
+              <div class="upload-zone" style="padding:12px" onclick="toast('info','原型演示：上传合同 / 凭证 / 报名资料')">
+                <div class="u-muted-sm" style="display:flex;align-items:center;justify-content:center;gap:6px">
+                  <span data-icon="upload" data-size="14"></span>上传资料
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+initPage({
+  key: 'customer',
+  breadcrumb: [
+    { text: '首页', href: 'dashboard.html' },
+    { text: '客户管理', href: 'customers.html' },
+    { text: '客户档案' },
+  ]
+});
+hydrateIcons(document);
+bindTabs(document);
+bindPhoneEyes(document);
+
+/* ============ 统一时间轴数据 ============ */
+const TIMELINE = [
+  { type: 'service', title: '服务记录 · 正课第 4 讲', dot: 'is-success', time: '10-09 19:00-21:00', by: '李老师',
+    content: '课程主题：Python 数据清洗实战。学员按时到课，课堂练习完成度 100%，课后作业提交及时。',
+    meta: ['服务类型：正课', '时长 2 小时', '评价：★★★★★', '无异常'], kind: 'service' },
+  { type: 'service', title: '服务记录 · 答疑辅导', dot: 'is-success', time: '10-16 20:00-21:00', by: '李老师',
+    content: '针对作业中的数据透视表问题进行一对一线上答疑，学员掌握良好。',
+    meta: ['服务类型：辅导', '时长 1 小时', '评价：★★★★★', '无异常'], kind: 'service' },
+  { type: 'follow', title: '跟进记录 · 首次服务回访', dot: 'is-brand', time: '10-09 16:30', by: '赵磊',
+    content: '开课首日回访，学员反馈课程节奏适中，已熟悉班主任与授课老师流程。',
+    meta: ['方式：电话', '时长 5 分钟', '结果：有意向'], kind: 'follow' },
+  { type: 'follow', title: '跟进记录 · 学习进度同步', dot: 'is-brand', time: '10-20 10:15', by: '赵磊',
+    content: '同步本月学习进度，学员表示对学历提升路径已明确，暂无额外问题。',
+    meta: ['方式：微信', '结果：待观察'], kind: 'follow' },
+  { type: 'change', title: '客户状态变更', dot: 'is-warning', time: '10-08 14:30', by: '系统',
+    content: '由「商机赢单」自动创建客户档案，初始状态为「正常在读」。', meta: ['来源：OPP2026100602'], kind: 'change' },
+  { type: 'follow', title: '跟进记录 · 成交后交付说明', dot: 'is-brand', time: '10-08 14:28', by: '赵磊',
+    content: '已向客户说明开课时间、服务周期与班主任联系方式，客户确认无误。',
+    meta: ['方式：电话', '结果：已确认'], kind: 'follow' },
+];
+
+function tlHtml(list) {
+  return list.map(f => `
+    <div class="timeline-item">
+      <span class="timeline-dot ${f.dot}"></span>
+      <div class="timeline-head">
+        <span class="timeline-title">${f.title}</span>
+        <span class="timeline-time">${f.time}</span>
+      </div>
+      <div class="timeline-body">${f.content}</div>
+      <div class="timeline-meta">
+        <span>${icon('users', 12)} ${f.by}</span>
+        ${f.meta.map(m => `<span>${m}</span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+document.getElementById('tlAll').innerHTML = tlHtml(TIMELINE);
+document.getElementById('tlFollow').innerHTML = tlHtml(TIMELINE.filter(t => t.kind === 'follow'));
+document.getElementById('tlChange').innerHTML = tlHtml(TIMELINE.filter(t => t.kind === 'change'));
+document.getElementById('svcList').innerHTML = TIMELINE.filter(t => t.kind === 'service').map(f => `
+  <div class="service-item">
+    <span class="service-icon">${icon('checkCircle', 17)}</span>
+    <div class="u-flex-1" style="min-width:0">
+      <div class="u-between">
+        <span class="u-strong" style="font-size:13.5px">${f.title.replace('服务记录 · ', '')}</span>
+        <span class="u-muted-sm u-mono">${f.time}</span>
+      </div>
+      <div class="u-muted-sm" style="margin-top:5px;line-height:1.65">${f.content}</div>
+      <div class="timeline-meta">
+        ${f.meta.map(m => `<span>${m}</span>`).join('')}
+        <span class="u-muted-sm">${icon('lock', 11)} 不可编辑删除</span>
+      </div>
+    </div>
+  </div>`).join('');
+
+/* ============ 添加服务记录 ============ */
+function openService() {
+  openModal({
+    title: '添加服务记录',
+    sub: '服务记录一经提交不可编辑、不可删除',
+    size: 'lg',
+    body: `<div class="form-grid">
+      <div class="field">
+        <label class="field-label">服务类型 <span class="req">*</span></label>
+        <select class="select"><option>正课</option><option>试听</option><option>辅导</option><option>答疑</option></select>
+      </div>
+      <div class="field">
+        <label class="field-label">服务日期 <span class="req">*</span></label>
+        <input type="date" class="input" value="2026-10-10">
+      </div>
+      <div class="field">
+        <label class="field-label">服务时长（小时） <span class="req">*</span></label>
+        <input class="input" type="number" value="2">
+      </div>
+      <div class="field">
+        <label class="field-label">服务人员</label>
+        <input class="input" value="李老师">
+      </div>
+      <div class="field col-span-2">
+        <label class="field-label">服务内容 <span class="req">*</span></label>
+        <textarea class="textarea" style="min-height:90px" placeholder="本次服务的内容、学员表现、注意事项等"></textarea>
+      </div>
+      <div class="field">
+        <label class="field-label">服务评价</label>
+        <select class="select"><option>★★★★★ 非常满意</option><option>★★★★ 满意</option><option>★★★ 一般</option><option>★★ 不满意</option></select>
+      </div>
+      <div class="field">
+        <label class="field-label">是否异常</label>
+        <select class="select"><option>否（正常）</option><option>是（需上报）</option></select>
+      </div>
+    </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','服务记录已提交，不可编辑删除')">提交记录</button>`,
+  });
+}
+document.getElementById('btnService').addEventListener('click', openService);
+
+/* ============ 跟进记录 ============ */
+function openFollow() {
+  openModal({
+    title: '添加跟进记录',
+    size: 'sm',
+    body: `<div class="field">
+        <label class="field-label">跟进方式 <span class="req">*</span></label>
+        <select class="select"><option>电话</option><option>微信</option><option>面谈</option></select>
+      </div>
+      <div class="field u-mt-16">
+        <label class="field-label">跟进内容 <span class="req">*</span></label>
+        <textarea class="textarea" style="min-height:100px" placeholder="10 - 1000 字"></textarea>
+      </div>
+      <div class="field u-mt-16">
+        <label class="field-label">下次跟进时间</label>
+        <input type="datetime-local" class="input">
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','跟进记录已保存')">保存</button>`,
+  });
+}
+
+/* ============ 状态变更 ============ */
+function openStatus() {
+  openModal({
+    title: '变更客户状态',
+    sub: '状态变更需填写原因，记录进入时间轴',
+    size: 'sm',
+    body: `
+      <div class="field">
+        <label class="field-label">目标状态 <span class="req">*</span></label>
+        <select class="select" id="targetStatus">
+          <option>正常在读</option><option>暂停服务</option>
+          <option>已结课</option><option>已退费</option><option>已流失</option>
+        </select>
+      </div>
+      <div class="field u-mt-16">
+        <label class="field-label">变更原因 <span class="req">*</span></label>
+        <select class="select" onchange="document.getElementById('rsnWrap').classList.toggle('u-hidden', this.value!=='其他')">
+          <option>服务期满正常结课</option><option>学员申请延期</option>
+          <option>学员申请休学</option><option>退款协商一致</option>
+          <option>长期未出勤</option><option>其他</option>
+        </select>
+      </div>
+      <div class="field u-mt-16 u-hidden" id="rsnWrap">
+        <label class="field-label">补充说明 <span class="req">*</span></label>
+        <textarea class="textarea" maxlength="200"></textarea>
+      </div>
+      <div class="alert alert-info u-mt-16">
+        <span class="alert-icon">${icon('info', 16)}</span>
+        <div>客户状态变更为<b>追加型记录</b>，不可删除，进入统一时间轴（BR-CU02）。</div>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','客户状态已变更，记录已进入时间轴')">确认变更</button>`,
+  });
+}
+document.getElementById('btnStatus').addEventListener('click', openStatus);
+
+/* ============ 转移归属 ============ */
+function openTransfer() {
+  openModal({
+    title: '转移客户归属',
+    sub: '归属人转移需主管操作，并记录变更日志',
+    size: 'sm',
+    body: `
+      <div class="field">
+        <label class="field-label">新归属人 <span class="req">*</span></label>
+        <select class="select"><option>王小雨（华东·一组）</option><option>陈思远（华东·一组）</option><option>孙悦（华北·一组）</option></select>
+      </div>
+      <div class="field u-mt-16">
+        <label class="field-label">转移原因 <span class="req">*</span></label>
+        <select class="select"><option>顾问离职 / 调岗</option><option>客户主动要求</option><option>部门调整</option><option>其他</option></select>
+      </div>
+      <div class="alert alert-warning u-mt-16">
+        <span class="alert-icon">${icon('alert', 16)}</span>
+        <div>转移后<b>原归属人将不可见</b>该客户数据；历史跟进与服务记录完整保留。</div>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','归属已转移，变更日志已记录')">确认转移</button>`,
+  });
+}
+
+/* ============ 其他 ============ */
+document.getElementById('btnBack').addEventListener('click', () => location.href = 'customers.html');
+document.getElementById('btnEdit').addEventListener('click', () => toast('info', '原型演示：编辑客户基础信息'));
+</script>
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公海池 · 轻客管家</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .pool-hero {
+    display: flex; align-items: center; gap: 20px;
+    padding: 18px 20px; border-radius: var(--radius);
+    background: linear-gradient(120deg, #f5f3ff, #eef4ff);
+    border: 1px solid #ddd6fe; margin-bottom: 14px;
+  }
+  .pool-hero-icon {
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: #fff; color: var(--purple-500);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .pool-stat-row { display: flex; gap: 30px; margin-left: auto; flex-wrap: wrap; }
+  .pool-stat .ps-value { font-size: 20px; font-weight: 700; color: var(--ink-900); font-variant-numeric: tabular-nums; }
+  .pool-stat .ps-label { font-size: 11.5px; color: var(--ink-500); margin-top: 1px; }
+
+  .pool-card { position: relative; overflow: hidden; }
+  .pool-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  }
+  .pool-card.hot::before { background: var(--danger-500); }
+  .pool-card.warm::before { background: var(--warning-500); }
+  .pool-card.cold::before { background: var(--ink-300); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main-area">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">公海池</h1>
+          <p class="page-desc">
+            无归属人的线索 / 商机，全员可见可领取 · 领取为原子操作 ·
+            领取后 <b>15 天</b>未跟进将自动回收
+          </p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="btnRule">回收规则</button>
+          <button class="btn btn-primary" id="btnBatchClaim">批量领取</button>
+        </div>
+      </div>
+
+      <!-- 公海概览 -->
+      <div class="pool-hero">
+        <span class="pool-hero-icon" data-icon="pool" data-size="24"></span>
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--ink-900)">公海数据池</div>
+          <div class="u-muted-sm">当前共 <b style="color:var(--purple-700)">186</b> 条待领取，按来源渠道与意向课程筛选更容易挑到合适的数据</div>
+        </div>
+        <div class="pool-stat-row">
+          <div class="pool-stat"><div class="ps-value">186</div><div class="ps-label">可领取线索</div></div>
+          <div class="pool-stat"><div class="ps-value">42</div><div class="ps-label">可领取商机</div></div>
+          <div class="pool-stat"><div class="ps-value" style="color:var(--danger-500)">28</div><div class="ps-label">今日新释放</div></div>
+          <div class="pool-stat"><div class="ps-value" style="color:var(--warning-700)">31</div><div class="ps-label">临近回收</div></div>
+        </div>
+      </div>
+
+      <!-- 筛选 -->
+      <div class="card u-mb-16">
+        <div class="filter-bar">
+          <div class="filter-grid">
+            <div class="filter-item">
+              <span class="filter-label">关键词</span>
+              <div class="search-box u-flex-1">
+                <span class="search-icon" id="kwIcon"></span>
+                <input class="input" id="kwInput" placeholder="手机号 / 姓名">
+              </div>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">数据类型</span>
+              <select class="select" id="fType">
+                <option value="">全部</option>
+                <option>线索</option>
+                <option>商机</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">来源渠道</span>
+              <select class="select"><option>全部渠道</option><option>抖音短视频</option><option>小红书</option><option>朋友转介绍</option></select>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">意向课程</span>
+              <select class="select"><option>全部课程</option><option>Python 数据分析</option><option>成人学历提升</option></select>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">释放时间</span>
+              <select class="select"><option>不限</option><option>今日释放</option><option>3 天内</option><option>7 天内</option></select>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">排序</span>
+              <select class="select"><option>释放时间倒序</option><option>意向度优先</option><option>创建时间倒序</option></select>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary" id="btnSearch">查询</button>
+            <button class="btn" id="btnReset">重置</button>
+            <span class="u-right u-muted-sm">公海数据对全员可见，任意角色均可领取</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 批量条 -->
+      <div class="batch-bar u-mb-16 u-hidden" data-batch-bar>
+        <span>已选择 <strong data-batch-count>0</strong> 条公海数据</span>
+        <div class="u-right u-center u-gap-8">
+          <button class="btn btn-sm btn-primary" id="btnClaimSelected">批量领取</button>
+          <button class="btn btn-sm btn-ghost" id="btnCancelBatch">取消选择</button>
+        </div>
+      </div>
+
+      <!-- 卡片列表 -->
+      <div class="grid grid-3" id="poolGrid"></div>
+
+      <div class="card u-mt-16">
+        <div class="pagination">
+          <span class="page-info">共 186 条，已展示 6 条</span>
+          <div class="page-nav">
+            <button class="page-btn" disabled>‹</button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <span class="page-ellipsis">…</span>
+            <button class="page-btn">19</button>
+            <button class="page-btn">›</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+initPage({
+  key: 'pool',
+  breadcrumb: [{ text: '首页', href: 'dashboard.html' }, { text: '公海池' }]
+});
+document.getElementById('kwIcon').innerHTML = icon('search', 15);
+
+/* ============ 数据 ============ */
+const POOLS = [
+  { name: '郑一鸣', phone: '13756789012', type: '线索', channel: '朋友转介绍', course: '少儿编程启蒙班', intent: '高', released: '2 小时前', reason: '长期未跟进', days: 14, hot: 'hot',  cls: 'avatar-e', note: '9 岁男孩家长，想学编程启蒙，预算 5k 以内' },
+  { name: '邵天佑', phone: '17612345678', type: '线索', channel: '朋友转介绍', course: '青少年数学思维提升', intent: '高', released: '5 小时前', reason: '主动放弃', days: 15, hot: 'hot',  cls: 'avatar-d', note: '初二学生，家长关注升学，沟通后暂缓' },
+  { name: '沈梦瑶', phone: '13967012345', type: '线索', channel: '抖音短视频', course: 'Python 数据分析训练营', intent: '中', released: '1 天前', reason: '联系方式失效', days: 12, hot: 'warm', cls: 'avatar-e', note: '直播课留资，空号打不通' },
+  { name: '范志强', phone: '15890123456', type: '商机', channel: '百度 SEM', course: '成人学历提升 · 专升本', intent: '高', released: '1 天前', reason: '无真实意向', days: 10, hot: 'warm', cls: 'avatar-b', note: '商机金额 ¥4,200，谈判中放弃' },
+  { name: '夏雨桐', phone: '18601234567', type: '线索', channel: '小红书', course: '职场演讲表达课', intent: '中', released: '2 天前', reason: '离职调岗', days: 8,  hot: 'cold', cls: 'avatar-f', note: '原负责人离职释放' },
+  { name: '汤俊杰', phone: '13345678901', type: '商机', channel: '朋友圈广告', course: 'Python 数据分析训练营', intent: '高', released: '3 天前', reason: '客户已成交他处', days: 5,  hot: 'cold', cls: 'avatar-d', note: '金额 ¥6,800，已在竞品成交' },
+];
+
+const INTENT_TAG = { 高: 'tag-danger', 中: 'tag-warning', 低: 'tag-default' };
+
+function renderPool() {
+  const kw = document.getElementById('kwInput').value.trim();
+  const type = document.getElementById('fType').value;
+  let list = POOLS.slice();
+  if (type) list = list.filter(r => r.type === type);
+  if (kw) list = list.filter(r => r.name.includes(kw) || r.phone.includes(kw));
+
+  const grid = document.getElementById('poolGrid');
+  if (!list.length) {
+    grid.innerHTML = `<div class="card" style="grid-column:1/-1"><div class="empty-state">
+      <div class="empty-icon">${icon('inbox', 26)}</div>
+      <div class="empty-title">没有符合条件的公海数据</div>
+      <div class="empty-desc">试试更换筛选条件，或重置后查看全部</div>
+    </div></div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map((r, i) => `
+    <div class="card pool-card ${r.hot}">
+      <div class="card-body">
+        <div class="u-between u-mb-8">
+          <div class="u-center u-gap-8">
+            <label class="checkbox"><input type="checkbox" data-check-row="${r.name}"><span class="box"></span></label>
+            <span class="avatar avatar-sm ${r.cls}">${r.name[0]}</span>
+            <div>
+              <div class="u-strong" style="font-size:14px">${r.name}</div>
+              <div class="u-muted-sm masked-phone">${maskPhone(r.phone)}</div>
+            </div>
+          </div>
+          <span class="tag ${INTENT_TAG[r.intent]}">意向${r.intent}</span>
+        </div>
+
+        <div class="u-center u-gap-6 u-mb-8" style="flex-wrap:wrap">
+          <span class="tag ${r.type === '商机' ? 'tag-purple' : 'tag-default'}">${r.type}</span>
+          <span class="tag tag-outline">${r.channel}</span>
+          <span class="u-muted-sm">${r.course}</span>
+        </div>
+
+        <div class="timeline-card" style="margin-top:0">
+          <div class="u-muted-sm" style="line-height:1.6">${r.note}</div>
+        </div>
+
+        <div class="u-between u-mt-12" style="padding-top:11px;border-top:1px dashed var(--ink-200)">
+          <div>
+            <div class="u-muted-sm">释放 ${r.released} · 原因「${r.reason}」</div>
+            <div class="u-muted-sm" style="margin-top:2px;color:${r.days >= 13 ? 'var(--danger-500)' : 'inherit'}">
+              ${r.days >= 13 ? `领取后 ${r.days} 天将自动回收` : '领取后 15 天内需跟进'}
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="claimOne('${r.name}')">领取</button>
+        </div>
+      </div>
+    </div>`).join('');
+
+  bindSelectAll(grid);
+  applyPerms(grid, currentRole());
+}
+renderPool();
+
+/* ============ 领取 ============ */
+function claimOne(name) {
+  confirmModal({
+    title: '领取公海数据',
+    tone: 'info',
+    okText: '确认领取',
+    message: `领取「<b>${name}</b>」后，该数据将归属到您名下，其他同事立即不可见。<br>
+              请在 <b>24 小时内完成首次跟进</b>，否则计入超期预警；<b>15 天</b>未跟进将自动回收至公海。`,
+    onOk: () => {
+      const card = [...document.querySelectorAll('#poolGrid .pool-card')]
+        .find(c => c.textContent.includes(name));
+      if (card) {
+        card.style.opacity = '.45';
+        card.style.pointerEvents = 'none';
+        card.querySelector('button').outerHTML = '<span class="tag tag-success">已领取</span>';
+      }
+      toast('success', `已领取「${name}」，请尽快完成首次跟进`);
+    },
+  });
+}
+document.getElementById('btnClaimSelected').addEventListener('click', () => {
+  const ids = getCheckedIds(document.getElementById('poolGrid'));
+  confirmModal({
+    title: '批量领取公海数据',
+    okText: '确认领取',
+    message: `即将领取所选 <b>${ids.length}</b> 条公海数据。批量领取同样为原子操作，
+              若部分数据已被他人抢先领取，该部分将失败并单独提示。`,
+    onOk: () => {
+      ids.forEach(id => {
+        const card = [...document.querySelectorAll('#poolGrid .pool-card')]
+          .find(c => c.textContent.includes(id));
+        if (card) {
+          card.style.opacity = '.45';
+          card.style.pointerEvents = 'none';
+          card.querySelector('button').outerHTML = '<span class="tag tag-success">已领取</span>';
+        }
+      });
+      document.querySelectorAll('#poolGrid [data-check-row]').forEach(r => { r.checked = false; });
+      updateBatchBar(document);
+      toast('success', `成功领取 ${ids.length} 条数据`);
+    },
+  });
+});
+document.getElementById('btnBatchClaim').addEventListener('click', () => {
+  const ids = getCheckedIds(document.getElementById('poolGrid'));
+  if (!ids.length) { toast('warning', '请先勾选要领取的数据'); return; }
+  document.getElementById('btnClaimSelected').click();
+});
+document.getElementById('btnCancelBatch').addEventListener('click', () => {
+  document.querySelectorAll('[data-check-row]').forEach(r => { r.checked = false; });
+  const all = document.querySelector('[data-check-all]');
+  if (all) all.checked = false;
+  updateBatchBar(document);
+});
+
+/* ============ 筛选 ============ */
+document.getElementById('btnSearch').addEventListener('click', () => { renderPool(); toast('info', '已按当前条件筛选公海数据'); });
+document.getElementById('kwInput').addEventListener('keydown', e => { if (e.key === 'Enter') renderPool(); });
+document.getElementById('fType').addEventListener('change', renderPool);
+document.getElementById('btnReset').addEventListener('click', () => {
+  document.getElementById('kwInput').value = '';
+  document.getElementById('fType').value = '';
+  document.querySelectorAll('.filter-grid select').forEach(s => s.selectedIndex = 0);
+  renderPool();
+  toast('success', '筛选条件已重置');
+});
+
+/* ============ 回收规则 ============ */
+document.getElementById('btnRule').addEventListener('click', () => {
+  openModal({
+    title: '公海池规则说明',
+    size: 'lg',
+    body: `
+      <div class="timeline">
+        <div class="timeline-item">
+          <span class="timeline-dot is-purple"></span>
+          <div class="timeline-head"><span class="timeline-title">公海数据产生</span></div>
+          <div class="timeline-body">线索 / 商机被「踢回公海」或账号停用离职后，归属人清空进入公海，全员可见。</div>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-brand"></span>
+          <div class="timeline-head"><span class="timeline-title">领取（原子操作）</span></div>
+          <div class="timeline-body">任意角色均可领取，需并发锁校验防止多人同时领取同一数据，领取后其他同事立即不可见。</div>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-warning"></span>
+          <div class="timeline-head"><span class="timeline-title">自动回收</span></div>
+          <div class="timeline-body">领取后 <b>15 天</b>（可配置）未跟进，自动回收至公海，原归属记录保留。</div>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-success"></span>
+          <div class="timeline-head"><span class="timeline-title">历史轨迹保留</span></div>
+          <div class="timeline-body">领取与踢回均保留原跟进记录与历史归属轨迹，可完整回溯。</div>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-danger"></span>
+          <div class="timeline-head"><span class="timeline-title">异常监控</span></div>
+          <div class="timeline-body">同一数据被频繁踢回 / 领取将纳入监控，用于识别线索质量与跟进质量问题。</div>
+        </div>
+      </div>`,
+    footer: `<button class="btn btn-primary" data-modal-close>我知道了</button>`,
+  });
+});
+</script>
+</body>
+</html>

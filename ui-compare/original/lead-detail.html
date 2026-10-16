@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>线索详情 · 轻客管家</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .detail-grid { display: grid; gap: 14px; grid-template-columns: 1fr 350px; align-items: start; }
+  @media (max-width: 1200px) { .detail-grid { grid-template-columns: 1fr; } }
+
+  .profile-head {
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 20px; border-bottom: 1px solid var(--ink-100);
+  }
+  .profile-avatar {
+    width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 600; color: #fff;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  }
+  .profile-name { font-size: 19px; font-weight: 600; color: var(--ink-900); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .profile-phone { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 14px; color: var(--ink-600); }
+  .profile-meta { display: flex; gap: 18px; margin-top: 12px; flex-wrap: wrap; }
+  .profile-meta-item { font-size: 12.5px; color: var(--ink-500); }
+  .profile-meta-item strong { display: block; font-size: 13.5px; color: var(--ink-900); font-weight: 600; margin-top: 1px; }
+
+  .action-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 14px 20px; border-bottom: 1px solid var(--ink-100);
+    background: linear-gradient(180deg, var(--ink-50), #fff);
+  }
+  .side-card + .side-card { margin-top: 14px; }
+  .stat-mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+  .stat-mini .sm-value { font-size: 19px; font-weight: 700; color: var(--ink-900); font-variant-numeric: tabular-nums; }
+  .stat-mini .sm-label { font-size: 11.5px; color: var(--ink-500); margin-top: 2px; }
+  .follow-form .field + .field { margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main-area">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="page">
+      <!-- 详情头部 -->
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">
+            线索详情
+            <span class="u-muted-sm" style="font-weight:400;font-size:14px">编号 LD2026101001</span>
+          </h1>
+          <p class="page-desc">线索跟进记录仅可追加，不可编辑或删除，以保证过程可追溯</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="btnBack">返回列表</button>
+          <button class="btn" id="btnEditLead" data-min="SALES_MANAGER">编辑</button>
+          <button class="btn" onclick="openPseudo('林雅琴')">标记伪线索</button>
+          <button class="btn" onclick="openPool('林雅琴')">踢回公海</button>
+          <button class="btn btn-primary" id="btnConvert">转为商机</button>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <!-- 左侧主区 -->
+        <div>
+          <!-- 基本档案 -->
+          <div class="card">
+            <div class="profile-head">
+              <div class="profile-avatar">林</div>
+              <div class="u-flex-1" style="min-width:0">
+                <div class="profile-name">
+                  林雅琴
+                  <span class="tag tag-brand" id="statusTagBox">待跟进</span>
+                  <span class="tag tag-purple">高意向</span>
+                </div>
+                <div class="profile-phone masked-phone" data-phone="13812345678">
+                  <span class="phone-text">138****5678</span>
+                  <span class="eye-btn" data-icon="eye" data-size="14"></span>
+                  <span class="u-muted-sm">点击查看完整号码（将记录日志）</span>
+                </div>
+                <div class="profile-meta">
+                  <div class="profile-meta-item">来源渠道<strong>抖音短视频</strong></div>
+                  <div class="profile-meta-item">意向课程<strong>Python 数据分析训练营</strong></div>
+                  <div class="profile-meta-item">归属人<strong>王小雨</strong></div>
+                  <div class="profile-meta-item">所属部门<strong>华东销售部 · 一组</strong></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 状态流转进度 -->
+            <div class="card-body" style="padding:18px 20px">
+              <div class="steps">
+                <div class="step done"><span class="step-node" data-icon="check" data-size="13" data-stroke="3"></span><span class="step-label">待分配</span></div>
+                <div class="step-line done"></div>
+                <div class="step current"><span class="step-node">2</span><span class="step-label">待跟进</span></div>
+                <div class="step-line"></div>
+                <div class="step"><span class="step-node">3</span><span class="step-label">转商机</span></div>
+                <div class="step-line"></div>
+                <div class="step"><span class="step-node">4</span><span class="step-label">终态</span></div>
+              </div>
+            </div>
+
+            <!-- 详情字段 -->
+            <div style="padding:0 20px 18px">
+              <div class="desc-list" style="grid-template-columns:repeat(3,1fr)">
+                <div class="desc-item"><span class="desc-label">性别</span><span class="desc-value">女</span></div>
+                <div class="desc-item"><span class="desc-label">创建时间</span><span class="desc-value u-mono">2026-10-08 09:12</span></div>
+                <div class="desc-item"><span class="desc-label">来源渠道</span><span class="desc-value">抖音短视频</span></div>
+                <div class="desc-item"><span class="desc-label">创建人</span><span class="desc-value">系统导入</span></div>
+                <div class="desc-item"><span class="desc-label">最后跟进</span><span class="desc-value u-mono">2026-10-09 15:20</span></div>
+                <div class="desc-item"><span class="desc-label">下次跟进</span><span class="desc-value u-warning-text">今日 10:30</span></div>
+                <div class="desc-item span-3" style="grid-column:span 3"><span class="desc-label">备注</span><span class="desc-value" style="font-weight:400">抖音直播课观众，主动咨询「零基础能否学会」，已加微信，关注就业方向。</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 跟进时间轴 -->
+          <div class="card u-mt-16">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="title-bar"></span>跟进记录
+                <span class="tag tag-default">共 3 条</span>
+              </div>
+              <button class="btn btn-primary btn-sm" id="btnAddFollow">+ 添加跟进记录</button>
+            </div>
+            <div class="card-body">
+              <div class="timeline" id="timeline"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧栏 -->
+        <div>
+          <!-- 快捷操作 -->
+          <div class="card side-card">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar" style="background:var(--warning-500)"></span>快捷操作</div>
+            </div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn btn-primary btn-block" id="btnFollow1">添加跟进记录</button>
+              <button class="btn btn-block" id="btnAssign1" data-min="SALES_MANAGER">重新分配</button>
+              <button class="btn btn-block" id="btnConvert1">转为商机</button>
+              <button class="btn btn-block" onclick="openPool('林雅琴')">踢回公海池</button>
+              <button class="btn btn-block" onclick="openPseudo('林雅琴')">标记为伪线索</button>
+            </div>
+          </div>
+
+          <!-- 跟进概览 -->
+          <div class="card side-card">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar" style="background:var(--purple-500)"></span>跟进概览</div>
+            </div>
+            <div class="card-body">
+              <div class="stat-mini-grid u-mb-16">
+                <div class="stat-mini"><div class="sm-value">3</div><div class="sm-label">跟进次数</div></div>
+                <div class="stat-mini"><div class="sm-value">2</div><div class="sm-label">已聊天数</div></div>
+                <div class="stat-mini"><div class="sm-value" style="color:var(--success-500)">高</div><div class="sm-label">意向度</div></div>
+              </div>
+              <div class="info-row"><span class="ir-label">首次跟进及时</span><span class="ir-value u-success-text">是（4h 内）</span></div>
+              <div class="info-row"><span class="ir-label">平均响应时长</span><span class="ir-value">2.4 小时</span></div>
+              <div class="info-row"><span class="ir-label">创建至今</span><span class="ir-value">2 天</span></div>
+              <div class="info-row"><span class="ir-label">转化耗时</span><span class="ir-value">待转化</span></div>
+            </div>
+          </div>
+
+          <!-- 关联信息 -->
+          <div class="card side-card">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar" style="background:var(--success-500)"></span>关联信息</div>
+            </div>
+            <div class="card-body">
+              <div class="info-row">
+                <span class="ir-label">关联商机</span>
+                <span class="ir-value u-muted-sm">尚未转化</span>
+              </div>
+              <div class="info-row">
+                <span class="ir-label">意向课程</span>
+                <span class="ir-value u-link" onclick="toast('info','原型演示：跳转课程详情')">Python 数据分析训练营</span>
+              </div>
+              <div class="info-row">
+                <span class="ir-label">课程定价</span>
+                <span class="ir-value u-danger-text">¥ 6,800</span>
+              </div>
+              <div class="info-row">
+                <span class="ir-label">历史归属轨迹</span>
+                <span class="ir-value u-link" onclick="toast('info','原型演示：查看归属变更历史')">王小雨（当前）</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 附件 -->
+          <div class="card side-card">
+            <div class="card-head">
+              <div class="card-title"><span class="title-bar" style="background:var(--ink-400)"></span>附件</div>
+              <span class="u-muted-sm">2 个</span>
+            </div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+              <div class="attachment">
+                <span class="att-icon" data-icon="file" data-size="15"></span>
+                <div class="u-flex-1" style="min-width:0">
+                  <div class="u-ellipsis" style="font-size:13px;font-weight:500">学员信息登记表.pdf</div>
+                  <div class="u-muted-sm">1.2 MB · 10-08</div>
+                </div>
+              </div>
+              <div class="attachment">
+                <span class="att-icon" data-icon="image" data-size="15"></span>
+                <div class="u-flex-1" style="min-width:0">
+                  <div class="u-ellipsis" style="font-size:13px;font-weight:500">直播课截图.png</div>
+                  <div class="u-muted-sm">486 KB · 10-08</div>
+                </div>
+              </div>
+              <div class="upload-zone" style="padding:12px" onclick="toast('info','原型演示：上传附件，单个 ≤ 10MB，最多 5 个')">
+                <div class="u-muted-sm" style="display:flex;align-items:center;justify-content:center;gap:6px"><span data-icon="upload" data-size="14"></span>点击上传附件</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+/* ============ 初始化 ============ */
+initPage({
+  key: 'leads',
+  breadcrumb: [
+    { text: '首页', href: 'dashboard.html' },
+    { text: '线索管理', href: 'leads.html' },
+    { text: '线索详情' },
+  ]
+});
+
+/* ============ 时间轴 ============ */
+const FOLLOWS = [
+  {
+    type: 'follow', way: '电话', result: '有意向', dot: 'is-brand',
+    title: '电话跟进 · 意向明确',
+    time: '2026-10-09 15:20', by: '王小雨',
+    content: '学员自述有 3 年财务经验，想转行做数据分析，询问零基础是否可学、是否有就业辅导。已同步发送课程大纲。',
+    meta: ['时长 8 分钟', '下次跟进：今日 10:30'],
+    attach: null,
+  },
+  {
+    type: 'follow', way: '微信', result: '已加微信', dot: 'is-brand',
+    title: '微信沟通 · 发送资料',
+    time: '2026-10-08 14:05', by: '王小雨',
+    content: '加微信成功，已发送 Python 数据分析训练营课程大纲与往期学员作品集。学员当晚查看了资料。',
+    meta: ['发送 2 个文件'],
+    attach: '学员信息登记表.pdf',
+  },
+  {
+    type: 'system', way: '', result: '', dot: 'is-success',
+    title: '线索创建 · 系统导入',
+    time: '2026-10-08 09:12', by: '系统',
+    content: '来源渠道：抖音短视频（直播课留资表单自动导入）。意向课程：Python 数据分析训练营。',
+    meta: ['表单 ID: FRM-20261008-0321'],
+    attach: null,
+  },
+];
+
+function renderTimeline() {
+  document.getElementById('timeline').innerHTML = FOLLOWS.map(f => `
+    <div class="timeline-item">
+      <span class="timeline-dot ${f.dot}"></span>
+      <div class="timeline-head">
+        <span class="timeline-title">${f.title}</span>
+        ${f.result ? `<span class="tag ${f.result === '有意向' ? 'tag-success' : 'tag-brand'}">${f.result}</span>` : ''}
+        <span class="timeline-time">${f.time}</span>
+      </div>
+      <div class="timeline-body">${f.content}</div>
+      <div class="timeline-meta">
+        ${f.way ? `<span>${icon('phone', 12)} ${f.way}</span>` : ''}
+        <span>${icon('users', 12)} ${f.by}</span>
+        ${f.meta.map(m => `<span>${m}</span>`).join('')}
+      </div>
+      ${f.attach ? `<div class="timeline-card u-flex u-center u-gap-8">
+        <span class="att-icon" style="width:26px;height:26px">${icon('paperclip', 13)}</span>
+        <span style="font-size:12.5px">${f.attach}</span>
+      </div>` : ''}
+    </div>`).join('');
+}
+renderTimeline();
+
+/* ============ 添加跟进记录 ============ */
+function openFollowDrawer() {
+  openDrawer({
+    title: '添加跟进记录',
+    sub: '保存后更新最后跟进时间与跟进次数，并生成下次跟进待办',
+    body: `<form class="follow-form">
+      <div class="form-grid">
+        <div class="field">
+          <label class="field-label">跟进方式 <span class="req">*</span></label>
+          <select class="select">
+            <option>电话</option><option>微信</option><option>面谈</option>
+            <option>短信</option><option>其他</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">跟进结果 <span class="req">*</span></label>
+          <select class="select">
+            <option>有意向</option><option>无意向</option><option>待观察</option>
+            <option>已加微信</option><option>已报名试听</option><option>其他</option>
+          </select>
+        </div>
+        <div class="field col-span-2">
+          <label class="field-label">跟进内容 <span class="req">*</span></label>
+          <textarea class="textarea" id="followContent" style="min-height:110px"
+            placeholder="请记录本次沟通的关键信息、学员顾虑与下一步动作（10 - 1000 字）"></textarea>
+          <div class="field-hint">最少 10 字，最多 1000 字；当前 <span id="cnt">0</span> 字</div>
+        </div>
+        <div class="field col-span-2">
+          <label class="field-label">下次跟进时间</label>
+          <input type="datetime-local" class="input" value="2026-10-10T10:30">
+          <div class="field-hint">需晚于当前时间，到期后生成待办提醒</div>
+        </div>
+        <div class="field col-span-2">
+          <label class="field-label">附件</label>
+          <div class="upload-zone" onclick="toast('info','原型演示：上传附件，单个 ≤ 10MB，最多 5 个')">
+            <div class="u-muted-sm" style="display:flex;align-items:center;justify-content:center;gap:6px">
+              <span data-icon="upload" data-size="14"></span>点击上传图片或文档
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alert alert-info u-mt-16">
+        <span class="alert-icon" data-icon="info" data-size="15"></span>
+        <div>跟进结果为「<b>已报名试听</b>」时，系统将自动创建对应活动的预约记录（本期 P2，可延后）。</div>
+      </div>
+    </form>`,
+    footer: `<span class="foot-left u-muted-sm">跟进记录不可编辑、不可删除</span>
+             <button class="btn" data-drawer-close>取消</button>
+             <button class="btn btn-primary" id="btnSaveFollow">保存记录</button>`,
+    onMount: drawer => {
+      const ta = drawer.querySelector('#followContent');
+      ta.addEventListener('input', () => drawer.querySelector('#cnt').textContent = ta.value.length);
+      drawer.querySelector('#btnSaveFollow').addEventListener('click', () => {
+        const content = ta.value.trim();
+        if (content.length < 10) {
+          toast('error', '跟进内容至少 10 字');
+          return;
+        }
+        FOLLOWS.unshift({
+          type: 'follow', way: '电话', result: '有意向', dot: 'is-brand',
+          title: '电话跟进 · 意向明确', time: '刚刚', by: '王小雨',
+          content, meta: ['时长 6 分钟', '下次跟进：10-10 10:30'], attach: null,
+        });
+        renderTimeline();
+        closeDrawer();
+        toast('success', '跟进记录已保存，已生成下次跟进待办');
+      });
+    },
+  });
+}
+document.getElementById('btnAddFollow').addEventListener('click', openFollowDrawer);
+document.getElementById('btnFollow1').addEventListener('click', openFollowDrawer);
+
+/* ============ 转为商机 ============ */
+function openConvert() {
+  openModal({
+    title: '线索转为商机',
+    sub: '线索：林雅琴 · 转换为原子操作，任一失败则整体回滚',
+    size: 'lg',
+    body: `
+      <div class="alert alert-warning u-mb-16">
+        <span class="alert-icon" data-icon="alert" data-size="17"></span>
+        <div>转换成功后线索状态变为「<b>已转商机</b>」（终态），线索与商机的跟进记录在此<b>分界</b>，商机跟进记录独立起算，且同一线索仅可转化一次。</div>
+      </div>
+      <div class="form-grid">
+        <div class="field col-span-2">
+          <label class="field-label">商机名称 <span class="req">*</span></label>
+          <input class="input" value="林雅琴-Python数据分析训练营">
+        </div>
+        <div class="field">
+          <label class="field-label">客户姓名</label>
+          <input class="input" value="林雅琴" disabled>
+        </div>
+        <div class="field">
+          <label class="field-label">客户手机号</label>
+          <input class="input" value="138****5678" disabled>
+        </div>
+        <div class="field col-span-2">
+          <label class="field-label">关联课程 / 活动 <span class="req">*</span></label>
+          <select class="select"><option>Python 数据分析训练营（自动带出）</option><option>其他课程</option></select>
+        </div>
+        <div class="field">
+          <label class="field-label">商机金额 <span class="req">*</span></label>
+          <input class="input" type="number" value="6800">
+          <div class="field-hint">课程定价参考 ¥6,800</div>
+        </div>
+        <div class="field">
+          <label class="field-label">预计成交日期 <span class="req">*</span></label>
+          <input type="date" class="input" value="2026-10-24">
+        </div>
+        <div class="field">
+          <label class="field-label">商机来源</label>
+          <input class="input" value="抖音短视频（继承线索渠道）" disabled>
+        </div>
+        <div class="field">
+          <label class="field-label">归属人</label>
+          ${currentRole() === 'SALES'
+            ? `<div class="readonly-value"><span data-icon="lock" data-size="13"></span> 王小雨（继承，顾问不可改）</div>`
+            : `<select class="select"><option>王小雨（默认继承）</option><option>陈思远</option><option>赵磊</option></select>`}
+        </div>
+        <div class="field col-span-2">
+          <label class="field-label">初始阶段</label>
+          <select class="select"><option>跟进中（默认）</option><option>待跟进</option></select>
+        </div>
+        <div class="field col-span-2">
+          <label class="field-label">商机描述</label>
+          <textarea class="textarea" placeholder="补充商机背景，如学员职业背景、决策链、核心关注点"></textarea>
+        </div>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="convertDone()">确认转换</button>`,
+  });
+}
+function convertDone() {
+  const tag = document.getElementById('statusTagBox');
+  if (tag) {
+    tag.className = 'tag tag-success';
+    tag.textContent = '已转商机';
+  }
+  toast('success', '转换成功：线索与商机已建立双向关联，转化耗时 2 天已记录');
+}
+document.getElementById('btnConvert').addEventListener('click', openConvert);
+document.getElementById('btnConvert1').addEventListener('click', openConvert);
+
+/* ============ 其他 ============ */
+document.getElementById('btnBack').addEventListener('click', () => location.href = 'leads.html');
+document.getElementById('btnAssign1').addEventListener('click', () => {
+  toast('info', '原型演示：打开分配弹窗（与列表页一致）');
+});
+document.getElementById('btnEditLead').addEventListener('click', () => {
+  toast('info', '原型演示：进入线索编辑态');
+});
+
+</script>
+
+</body>
+</html>

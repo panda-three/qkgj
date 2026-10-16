@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>线索管理 · 改造版 · 轻客管家</title>
+<link rel="stylesheet" href="assets/compare.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="page" id="main-content">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">线索管理</h1>
+          <p class="page-desc">手机号唯一去重 · 伪线索终态默认隐藏 · 列表受部门与归属人双维度权限约束</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" data-toast="导入功能待接入">导入</button>
+          <button class="btn" data-toast="导出任务已提交">导出</button>
+          <button class="btn btn-primary" data-open="create">新建线索</button>
+        </div>
+      </div>
+
+      <!-- 快捷页签 -->
+      <div class="quick-tabs" id="quickTabs"></div>
+
+      <!-- 筛选区：可折叠 -->
+      <div class="card filter-card">
+        <div class="filter-grid" id="filterGrid">
+          <label class="fi">
+            <span class="fi-label">关键词</span>
+            <div class="search-box">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M11 11L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <input class="input" id="kwInput" placeholder="手机号 / 姓名">
+            </div>
+          </label>
+          <label class="fi">
+            <span class="fi-label">线索状态</span>
+            <select class="select" id="fStatus">
+              <option value="">全部状态</option>
+              <option value="PENDING">待分配</option>
+              <option value="FOLLOWING">待跟进</option>
+              <option value="PSEUDO">伪线索</option>
+              <option value="TO_POOL">公海池</option>
+              <option value="CONVERTED">已转商机</option>
+            </select>
+          </label>
+          <label class="fi" data-role="manager">
+            <span class="fi-label">归属人</span>
+            <select class="select" id="fOwner"><option value="">全部归属人</option></select>
+          </label>
+          <label class="fi" data-role="manager">
+            <span class="fi-label">来源渠道</span>
+            <select class="select" id="fChannel"><option value="">全部渠道</option></select>
+          </label>
+        </div>
+        <div class="filter-foot">
+          <button class="btn btn-primary btn-sm" id="btnSearch">查询</button>
+          <button class="btn btn-sm" id="btnReset">重置</button>
+          <button class="btn-link" id="btnToggle" aria-expanded="true">收起筛选</button>
+          <span class="role-hint" data-role="sales">当前角色仅可查看本人归属数据与公海数据</span>
+        </div>
+        <div class="active-filters" id="activeFilters"></div>
+      </div>
+
+      <!-- 列表 -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title"><span class="title-bar"></span>线索列表 <small id="listCount"></small></h2>
+          <div class="sort-box">
+            <span class="muted-sm">排序</span>
+            <select class="select select-sm" id="fSort">
+              <option value="createdAt">创建时间</option>
+              <option value="lastFollowAt">最后跟进时间</option>
+              <option value="nextFollowAt">下次跟进时间</option>
+              <option value="followCount">跟进次数</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 批量操作条 -->
+        <div class="batch-bar" id="batchBar" hidden>
+          <span>已选择 <strong id="batchCount">0</strong> 项</span>
+          <span class="cross-page" id="crossPage" hidden>跨 <em id="crossPageNum">1</em> 页</span>
+          <div class="batch-actions">
+            <button class="btn btn-sm btn-primary" data-batch="assign">批量分配</button>
+            <button class="btn btn-sm" data-batch="pseudo">批量标记伪线索</button>
+            <button class="btn btn-sm" data-batch="pool">踢回公海</button>
+            <button class="btn btn-sm btn-ghost" id="btnCancelBatch">取消选择</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="col-check">
+                  <label class="checkbox">
+                    <input type="checkbox" id="checkAll">
+                    <span class="box"></span>
+                  </label>
+                </th>
+                <th><button class="sort-btn" data-sort="name">姓名 / 手机号<span class="sort-ind"></span></button></th>
+                <th>来源渠道</th>
+                <th>意向课程</th>
+                <th>状态</th>
+                <th data-role="manager">归属人</th>
+                <th data-role="manager">所属部门</th>
+                <th><button class="sort-btn" data-sort="createdAt">创建时间<span class="sort-ind"></span></button></th>
+                <th><button class="sort-btn" data-sort="lastFollowAt">最后跟进<span class="sort-ind"></span></button></th>
+                <th class="ta-c"><button class="sort-btn" data-sort="followCount">跟进次数<span class="sort-ind"></span></button></th>
+                <th><button class="sort-btn" data-sort="nextFollowAt">下次跟进<span class="sort-ind"></span></button></th>
+                <th class="col-actions">操作</th>
+              </tr>
+            </thead>
+            <tbody id="leadBody"></tbody>
+          </table>
+          <div class="empty" id="emptyBox" hidden>
+            <div class="empty-icon" aria-hidden>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M3 6.5L10 3l7 3.5v7L10 17l-7-3.5v-7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                <path d="M3 6.5L10 10l7-3.5M10 10v7" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <p class="empty-title">没有符合条件的线索</p>
+            <p class="empty-desc">试试放宽筛选条件，或清空后重新查询</p>
+            <button class="btn btn-sm" id="btnEmptyClear">清空筛选条件</button>
+          </div>
+        </div>
+
+        <div class="pagination">
+          <span class="page-info" id="pageInfo"></span>
+          <div class="pager">
+            <label class="page-size">
+              每页
+              <select class="select select-sm" id="pageSize">
+                <option>20</option><option>50</option><option>100</option>
+              </select>
+              条
+            </label>
+            <div class="page-nav" id="pageNav"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- 批量分配弹窗 -->
+<div class="modal-root" id="assignModal" hidden>
+  <div class="modal-mask" data-close></div>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="assignTitle">
+    <div class="modal-grab" aria-hidden></div>
+    <div class="modal-head">
+      <h3 id="assignTitle">批量分配线索</h3>
+      <button class="modal-x" data-close aria-label="关闭">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note" id="assignNote"></p>
+      <label class="fi">
+        <span class="fi-label">分配策略</span>
+        <select class="select" id="assignStrategy">
+          <option value="manual">指定归属人</option>
+          <option value="balanced">按负载均衡（推荐）</option>
+          <option value="dept">在指定部门内均衡</option>
+        </select>
+      </label>
+      <label class="fi" id="assignOwnerRow">
+        <span class="fi-label">归属人</span>
+        <select class="select" id="assignOwner"></select>
+      </label>
+      <label class="fi" id="assignDeptRow" hidden>
+        <span class="fi-label">部门</span>
+        <select class="select" id="assignDept"></select>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close>取消</button>
+      <button class="btn btn-primary" id="btnAssignConfirm">确认分配</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新建线索弹窗 -->
+<div class="modal-root" id="createModal" hidden>
+  <div class="modal-mask" data-close></div>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+    <div class="modal-grab" aria-hidden></div>
+    <div class="modal-head">
+      <h3 id="createTitle">新建线索</h3>
+      <button class="modal-x" data-close aria-label="关闭">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="fi">
+        <span class="fi-label req">姓名</span>
+        <input class="input" id="cName" placeholder="请输入客户姓名">
+      </label>
+      <label class="fi">
+        <span class="fi-label req">手机号</span>
+        <input class="input" id="cPhone" type="tel" inputmode="numeric" placeholder="13800000000">
+        <span class="fi-hint">11 位手机号，作为线索唯一标识</span>
+      </label>
+      <label class="fi" data-role="manager">
+        <span class="fi-label">归属人</span>
+        <select class="select" id="cOwner"><option value="">暂不分配（进入待分配池）</option></select>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close>取消</button>
+      <button class="btn btn-primary" id="btnCreateConfirm">创建线索</button>
+    </div>
+  </div>
+</div>
+
+<!-- 确认弹窗 -->
+<div class="modal-root" id="confirmModal" hidden>
+  <div class="modal-mask" data-close></div>
+  <div class="modal-panel modal-sm" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal-head">
+      <h3 id="confirmTitle">确认操作</h3>
+      <button class="modal-x" data-close aria-label="关闭">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-text" id="confirmText"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close>取消</button>
+      <button class="btn btn-danger" id="btnConfirmOk">确认</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-root" id="toastRoot" aria-live="polite"></div>
+<script>window.__QK_DATA__ = {
+  "exportedAt": "2026-10-13T06:16:00.629Z",
+  "leads": [
+    {
+      "id": "l-mv5bhcbrtk3k8vzw",
+      "code": "LD-20261012-0013",
+      "name": "测试用户",
+      "phone": "13813478303",
+      "status": "CONVERTED",
+      "followCount": 1,
+      "lastFollowAt": "2026-10-12T13:57:58.487Z",
+      "nextFollowAt": null,
+      "createdAt": "2026-10-12T13:57:58.308Z",
+      "ownerId": "u-3",
+      "deptId": "d-team-a",
+      "sourceChannelId": "ch-1",
+      "intentCourseId": "c-1",
+      "ownerName": "王小雨",
+      "deptName": "一组",
+      "channelName": "百度SEM",
+      "courseName": "Python 程序设计入门"
+    },
+    {
+      "id": "l-3",
+      "code": "LD-20261012-0003",
+      "name": "郑雅雯",
+      "phone": "13910000003",
+      "status": "PENDING",
+      "followCount": 0,
+      "lastFollowAt": null,
+      "nextFollowAt": null,
+      "createdAt": "2026-10-11T13:57:31.463Z",
+      "ownerId": null,
+      "deptId": null,
+      "sourceChannelId": "ch-3",
+      "intentCourseId": "c-3",
+      "ownerName": null,
+      "deptName": null,
+      "channelName": "知乎内容",
+      "courseName": "人工智能应用基础"
+    },
+    {
+      "id": "l-8",
+      "code": "LD-20261012-0008",
+      "name": "高鹏飞",
+      "phone": "13910000008",
+      "status": "TO_POOL",
+      "followCount": 0,
+      "lastFollowAt": null,
+      "nextFollowAt": null,
+      "createdAt": "2026-10-10T13:57:31.499Z",
+      "ownerId": null,
+      "deptId": null,
+      "sourceChannelId": "ch-1",
+      "intentCourseId": "c-12",
+      "ownerName": null,
+      "deptName": null,
+      "channelName": "百度SEM",
+      "courseName": "企业管理进阶课"
+    },
+    {
+      "id": "l-1",
+      "code": "LD-20261012-0001",
+      "name": "周敏",
+      "phone": "13910000001",
+      "status": "FOLLOWING",
+      "followCount": 2,
+      "lastFollowAt": "2026-10-11T13:57:31.427Z",
+      "nextFollowAt": "2026-10-10T13:57:31.427Z",
+      "createdAt": "2026-10-09T13:57:31.400Z",
+      "ownerId": "u-3",
+      "deptId": "d-team-a",
+      "sourceChannelId": "ch-2",
+      "intentCourseId": "c-2",
+      "ownerName": "王小雨",
+      "deptName": "一组",
+      "channelName": "抖音信息流",
+      "courseName": "前端开发就业班"
+    },
+    {
+      "id": "l-9",
+      "code": "LD-20261012-0009",
+      "name": "许静怡",
+      "phone": "13910000009",
+      "status": "FOLLOWING",
+      "followCount": 2,
+      "lastFollowAt": "2026-10-10T13:57:31.504Z",
+      "nextFollowAt": null,
+      "createdAt": "2026-10-08T13:57:31.504Z",
+      "ownerId": "u-5",
+      "deptId": "d-team-b",
+      "sourceChannelId": "ch-3",
+      "intentCourseId": "c-6",
+      "ownerName": "刘思彤",
+      "deptName": "二组",
+      "channelName": "知乎内容",
+      "courseName": "Office 办公效率课"
+    },
+    {
+      "id": "l-4",
+      "code": "LD-20261012-0004",
+      "name": "孙浩然",
+      "phone": "13910000004",
+      "status": "FOLLOWING",
+      "followCount": 1,
+      "lastFollowAt": "2026-10-08T13:57:31.469Z",
+      "nextFollowAt": "2026-10-10T13:57:31.469Z",
+      "createdAt": "2026-10-07T13:57:31.469Z",
+      "ownerId": "u-4",
+      "deptId": "d-team-a",
+      "sourceChannelId": "ch-4",
+      "intentCourseId": "c-8",
+      "ownerName": "陈志强",
+      "deptName": "一组",
+      "channelName": "老学员转介绍",
+      "courseName": "AI 提示工程实战"
+    },
+    {
+      "id": "l-2",
+      "code": "LD-20261012-0002",
+      "name": "吴建国",
+      "phone": "13910000002",
+      "status": "FOLLOWING",
+      "followCount": 3,
+      "lastFollowAt": "2026-10-07T13:57:31.452Z",
+      "nextFollowAt": "2026-10-13T13:57:31.452Z",
+      "createdAt": "2026-10-04T13:57:31.452Z",
+      "ownerId": "u-3",
+      "deptId": "d-team-a",
+      "sourceChannelId": "ch-1",
+      "intentCourseId": "c-4",
+      "ownerName": "王小雨",
+      "deptName": "一组",
+      "channelName": "百度SEM",
+      "courseName": "数据分析师训练营"
+    },
+    {
+      "id": "l-10",
+      "code": "LD-20261012-0010",
+      "name": "罗天宇",
+      "phone": "13910000010",
+      "status": "FOLLOWING",
+      "followCount": 3,
+      "lastFollowAt": "2026-10-06T13:57:31.510Z",
+      "nextFollowAt": "2026-10-10T13:57:31.510Z",
+      "createdAt": "2026-10-03T13:57:31.510Z",
+      "ownerId": "u-5",
+      "deptId": "d-team-b",
+      "sourceChannelId": "ch-2",
+      "intentCourseId": "c-9",
+      "ownerName": "刘思彤",
+      "deptName": "二组",
+      "channelName": "抖音信息流",
+      "courseName": "电商运营实战"
+    },
+    {
+      "id": "l-5",
+      "code": "LD-20261012-0005",
+      "name": "林巧云",
+      "phone": "13910000005",
+      "status": "FOLLOWING",
+      "followCount": 4,
+      "lastFollowAt": "2026-10-04T13:57:31.481Z",
+      "nextFollowAt": "2026-10-13T13:57:31.481Z",
+      "createdAt": "2026-09-30T13:57:31.481Z",
+      "ownerId": "u-4",
+      "deptId": "d-team-a",
+      "sourceChannelId": "ch-2",
+      "intentCourseId": "c-2",
+      "ownerName": "陈志强",
+      "deptName": "一组",
+      "channelName": "抖音信息流",
+      "courseName": "前端开发就业班"
+    },
+    {
+      "id": "l-7",
+      "code": "LD-20261012-0007",
+      "name": "马丽娟",
+      "phone": "13910000007",
+      "status": "PSEUDO",
+      "followCount": 1,
+      "lastFollowAt": "2026-09-28T13:57:31.495Z",
+      "nextFollowAt": null,
+      "createdAt": "2026-09-27T13:57:31.495Z",
+      "ownerId": "u-5",
+      "deptId": "d-team-b",
+      "sourceChannelId": "ch-6",
+      "intentCourseId": "c-1",
+      "ownerName": "刘思彤",
+      "deptName": "二组",
+      "channelName": "自然流量",
+      "courseName": "Python 程序设计入门"
+    },
+    {
+      "id": "l-6",
+      "code": "LD-20261012-0006",
+      "name": "黄志远",
+      "phone": "13910000006",
+      "status": "TO_POOL",
+      "followCount": 2,
+      "lastFollowAt": "2026-09-24T13:57:31.490Z",
+      "nextFollowAt": null,
+      "createdAt": "2026-09-22T13:57:31.490Z",
+      "ownerId": null,
+      "deptId": null,
+      "sourceChannelId": "ch-5",
+      "intentCourseId": "c-5",
+      "ownerName": null,
+      "deptName": null,
+      "channelName": "职教机构合作",
+      "courseName": "成人本科学历提升"
+    },
+    {
+      "id": "l-11",
+      "code": "LD-20261012-0011",
+      "name": "谭思琪",
+      "phone": "13910000011",
+      "status": "CONVERTED",
+      "followCount": 5,
+      "lastFollowAt": "2026-09-25T13:57:31.546Z",
+      "nextFollowAt": null,
+      "createdAt": "2026-09-20T13:57:31.546Z",
+      "ownerId": "u-3",
+      "deptId": "d-team-a",
+      "sourceChannelId": "ch-4",
+      "intentCourseId": "c-3",
+      "ownerName": "王小雨",
+      "deptName": "一组",
+      "channelName": "老学员转介绍",
+      "courseName": "人工智能应用基础"
+    },
+    {
+      "id": "l-12",
+      "code": "LD-20261012-0012",
+      "name": "邓伟东",
+      "phone": "13910000012",
+      "status": "CONVERTED",
+      "followCount": 6,
+      "lastFollowAt": "2026-09-18T13:57:31.567Z",
+      "nextFollowAt": null,
+      "createdAt": "2026-09-12T13:57:31.567Z",
+      "ownerId": "u-4",
+      "deptId": "d-team-a",
+      "sourceChannelId": "ch-1",
+      "intentCourseId": "c-4",
+      "ownerName": "陈志强",
+      "deptName": "一组",
+      "channelName": "百度SEM",
+      "courseName": "数据分析师训练营"
+    }
+  ],
+  "opportunities": [
+    {
+      "id": "o-mv5bhciy6f6daqaf",
+      "code": "OP-20261012-0006",
+      "name": "测试用户-Python入门",
+      "customerName": "测试用户",
+      "phone": "13813478303",
+      "amount": 4800,
+      "stage": "FOLLOWING",
+      "expectedCloseDate": "2026-11-11T13:57:58.568Z",
+      "stageEnteredAt": "2026-10-12T13:57:58.569Z",
+      "ownerName": "王小雨",
+      "courseName": "Python 程序设计入门"
+    },
+    {
+      "id": "o-3",
+      "code": "OP-20261012-0003",
+      "name": "孙浩然-AI提示工程实战",
+      "customerName": "孙浩然",
+      "phone": "13910000004",
+      "amount": 5980,
+      "stage": "FOLLOWING",
+      "expectedCloseDate": "2026-10-27T13:57:31.636Z",
+      "stageEnteredAt": "2026-10-10T13:57:31.636Z",
+      "ownerName": "陈志强",
+      "courseName": "AI 提示工程实战"
+    },
+    {
+      "id": "o-1",
+      "code": "OP-20261012-0001",
+      "name": "周敏-前端开发就业班",
+      "customerName": "周敏",
+      "phone": "13910000001",
+      "amount": 12800,
+      "stage": "NEGOTIATING",
+      "expectedCloseDate": "2026-10-27T13:57:31.625Z",
+      "stageEnteredAt": "2026-10-06T13:57:31.625Z",
+      "ownerName": "王小雨",
+      "courseName": "前端开发就业班"
+    },
+    {
+      "id": "o-2",
+      "code": "OP-20261012-0002",
+      "name": "吴建国-数据分析师训练营",
+      "customerName": "吴建国",
+      "phone": "13910000002",
+      "amount": 8800,
+      "stage": "FOLLOWING",
+      "expectedCloseDate": "2026-10-27T13:57:31.632Z",
+      "stageEnteredAt": "2026-10-10T13:57:31.632Z",
+      "ownerName": "陈志强",
+      "courseName": "数据分析师训练营"
+    },
+    {
+      "id": "o-4",
+      "code": "OP-20261012-0004",
+      "name": "郑雅雯-人工智能应用基础",
+      "customerName": "郑雅雯",
+      "phone": "13910000013",
+      "amount": 3600,
+      "stage": "WON",
+      "expectedCloseDate": "2026-10-27T13:57:31.639Z",
+      "stageEnteredAt": "2026-10-10T13:57:31.639Z",
+      "ownerName": "王小雨",
+      "courseName": "人工智能应用基础"
+    },
+    {
+      "id": "o-5",
+      "code": "OP-20261012-0005",
+      "name": "林巧云-前端开发就业班",
+      "customerName": "林巧云",
+      "phone": "13910000005",
+      "amount": 12800,
+      "stage": "LOST",
+      "expectedCloseDate": "2026-10-27T13:57:31.642Z",
+      "stageEnteredAt": "2026-10-10T13:57:31.642Z",
+      "ownerName": "陈志强",
+      "courseName": "前端开发就业班"
+    }
+  ],
+  "customers": [
+    {
+      "id": "cu-1",
+      "code": "CU-20261012-0001",
+      "name": "郑雅雯",
+      "phone": "13910000013",
+      "status": "ACTIVE",
+      "amount": 3600,
+      "dealDate": "2026-10-09T13:57:31.646Z",
+      "serviceExpireDate": "2026-11-11T13:57:31.646Z",
+      "ownerName": "王小雨",
+      "courseName": "人工智能应用基础"
+    },
+    {
+      "id": "cu-2",
+      "code": "CU-20261012-0002",
+      "name": "许静怡",
+      "phone": "13910000009",
+      "status": "ACTIVE",
+      "amount": 999,
+      "dealDate": "2026-09-30T13:57:31.654Z",
+      "serviceExpireDate": "2026-10-27T13:57:31.654Z",
+      "ownerName": "刘思彤",
+      "courseName": "Office 办公效率课"
+    },
+    {
+      "id": "cu-3",
+      "code": "CU-20261012-0003",
+      "name": "罗天宇",
+      "phone": "13910000010",
+      "status": "COMPLETED",
+      "amount": 7680,
+      "dealDate": "2026-09-02T13:57:31.657Z",
+      "serviceExpireDate": "2026-10-07T13:57:31.657Z",
+      "ownerName": "刘思彤",
+      "courseName": "电商运营实战"
+    }
+  ],
+  "followUps": [
+    {
+      "id": "fu-ps-1791813478597",
+      "bizType": "LEAD",
+      "bizId": "ps-1791813478596",
+      "method": "PHONE",
+      "result": null,
+      "content": "这是一条标记伪线索前就已存在的历史跟进记录，用于验证 BR-P03 不物理删除跟进记录。",
+      "nextPlan": null,
+      "createdAt": "2026-10-12T13:57:58.597Z"
+    },
+    {
+      "id": "fu-mv5bhcgnmdmk39zc",
+      "bizType": "LEAD",
+      "bizId": "l-mv5bhcbrtk3k8vzw",
+      "method": "PHONE",
+      "result": "INTERESTED",
+      "content": "第一次电话沟通，客户对课程内容感兴趣，约了周末试听。",
+      "nextPlan": null,
+      "createdAt": "2026-10-12T13:57:58.487Z"
+    },
+    {
+      "id": "fu-l0-1",
+      "bizType": "LEAD",
+      "bizId": "l-1",
+      "method": "WECHAT",
+      "result": "WECHAT_ADDED",
+      "content": "第 2 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-10-10T13:57:31.451Z"
+    },
+    {
+      "id": "fu-o4",
+      "bizType": "OPPORTUNITY",
+      "bizId": "o-5",
+      "method": "PHONE",
+      "result": null,
+      "content": "与客户沟通了课程安排与价格方案，客户表示需要再考虑一下。",
+      "nextPlan": "下次跟进确认意向",
+      "createdAt": "2026-10-09T13:57:31.645Z"
+    },
+    {
+      "id": "fu-o3",
+      "bizType": "OPPORTUNITY",
+      "bizId": "o-4",
+      "method": "PHONE",
+      "result": null,
+      "content": "与客户沟通了课程安排与价格方案，客户表示需要再考虑一下。",
+      "nextPlan": "下次跟进确认意向",
+      "createdAt": "2026-10-09T13:57:31.641Z"
+    },
+    {
+      "id": "fu-o2",
+      "bizType": "OPPORTUNITY",
+      "bizId": "o-3",
+      "method": "PHONE",
+      "result": null,
+      "content": "与客户沟通了课程安排与价格方案，客户表示需要再考虑一下。",
+      "nextPlan": "下次跟进确认意向",
+      "createdAt": "2026-10-09T13:57:31.638Z"
+    },
+    {
+      "id": "fu-o1",
+      "bizType": "OPPORTUNITY",
+      "bizId": "o-2",
+      "method": "PHONE",
+      "result": null,
+      "content": "与客户沟通了课程安排与价格方案，客户表示需要再考虑一下。",
+      "nextPlan": "下次跟进确认意向",
+      "createdAt": "2026-10-09T13:57:31.635Z"
+    },
+    {
+      "id": "fu-o0",
+      "bizType": "OPPORTUNITY",
+      "bizId": "o-1",
+      "method": "PHONE",
+      "result": null,
+      "content": "与客户沟通了课程安排与价格方案，客户在对比优惠力度，预计本周内确认。",
+      "nextPlan": "下次跟进确认意向",
+      "createdAt": "2026-10-09T13:57:31.631Z"
+    },
+    {
+      "id": "fu-l8-1",
+      "bizType": "LEAD",
+      "bizId": "l-9",
+      "method": "WECHAT",
+      "result": "WECHAT_ADDED",
+      "content": "第 2 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-10-09T13:57:31.509Z"
+    },
+    {
+      "id": "fu-l0-0",
+      "bizType": "LEAD",
+      "bizId": "l-1",
+      "method": "PHONE",
+      "result": "INTERESTED",
+      "content": "第 1 次沟通，介绍了课程大纲与上课安排，客户表示有兴趣进一步了解。",
+      "nextPlan": null,
+      "createdAt": "2026-10-09T13:57:31.443Z"
+    },
+    {
+      "id": "fu-l8-0",
+      "bizType": "LEAD",
+      "bizId": "l-9",
+      "method": "PHONE",
+      "result": "INTERESTED",
+      "content": "第 1 次沟通，介绍了课程大纲与上课安排，客户表示有兴趣进一步了解。",
+      "nextPlan": null,
+      "createdAt": "2026-10-08T13:57:31.508Z"
+    },
+    {
+      "id": "fu-l3-0",
+      "bizType": "LEAD",
+      "bizId": "l-4",
+      "method": "PHONE",
+      "result": "INTERESTED",
+      "content": "第 1 次沟通，介绍了课程大纲与上课安排，客户表示有兴趣进一步了解。",
+      "nextPlan": null,
+      "createdAt": "2026-10-07T13:57:31.480Z"
+    },
+    {
+      "id": "fu-l1-2",
+      "bizType": "LEAD",
+      "bizId": "l-2",
+      "method": "PHONE",
+      "result": "OBSERVE",
+      "content": "第 3 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-10-06T13:57:31.463Z"
+    },
+    {
+      "id": "fu-l9-2",
+      "bizType": "LEAD",
+      "bizId": "l-10",
+      "method": "PHONE",
+      "result": "OBSERVE",
+      "content": "第 3 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-10-05T13:57:31.545Z"
+    },
+    {
+      "id": "fu-l1-1",
+      "bizType": "LEAD",
+      "bizId": "l-2",
+      "method": "WECHAT",
+      "result": "WECHAT_ADDED",
+      "content": "第 2 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-10-05T13:57:31.462Z"
+    },
+    {
+      "id": "fu-l9-1",
+      "bizType": "LEAD",
+      "bizId": "l-10",
+      "method": "WECHAT",
+      "result": "WECHAT_ADDED",
+      "content": "第 2 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-10-04T13:57:31.544Z"
+    },
+    {
+      "id": "fu-l1-0",
+      "bizType": "LEAD",
+      "bizId": "l-2",
+      "method": "PHONE",
+      "result": "INTERESTED",
+      "content": "第 1 次沟通，介绍了课程大纲与上课安排，客户表示有兴趣进一步了解。",
+      "nextPlan": null,
+      "createdAt": "2026-10-04T13:57:31.461Z"
+    },
+    {
+      "id": "fu-l9-0",
+      "bizType": "LEAD",
+      "bizId": "l-10",
+      "method": "PHONE",
+      "result": "INTERESTED",
+      "content": "第 1 次沟通，介绍了课程大纲与上课安排，客户表示有兴趣进一步了解。",
+      "nextPlan": null,
+      "createdAt": "2026-10-03T13:57:31.543Z"
+    },
+    {
+      "id": "fu-l4-3",
+      "bizType": "LEAD",
+      "bizId": "l-5",
+      "method": "WECHAT",
+      "result": "INTERESTED",
+      "content": "第 4 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-10-03T13:57:31.488Z"
+    },
+    {
+      "id": "fu-l4-2",
+      "bizType": "LEAD",
+      "bizId": "l-5",
+      "method": "PHONE",
+      "result": "OBSERVE",
+      "content": "第 3 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-10-02T13:57:31.487Z"
+    },
+    {
+      "id": "fu-l4-1",
+      "bizType": "LEAD",
+      "bizId": "l-5",
+      "method": "WECHAT",
+      "result": "WECHAT_ADDED",
+      "content": "第 2 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-10-01T13:57:31.487Z"
+    },
+    {
+      "id": "fu-l4-0",
+      "bizType": "LEAD",
+      "bizId": "l-5",
+      "method": "PHONE",
+      "result": "INTERESTED",
+      "content": "第 1 次沟通，介绍了课程大纲与上课安排，客户表示有兴趣进一步了解。",
+      "nextPlan": null,
+      "createdAt": "2026-09-30T13:57:31.486Z"
+    },
+    {
+      "id": "fu-l6-0",
+      "bizType": "LEAD",
+      "bizId": "l-7",
+      "method": "PHONE",
+      "result": "INTERESTED",
+      "content": "第 1 次沟通，介绍了课程大纲与上课安排，客户表示有兴趣进一步了解。",
+      "nextPlan": null,
+      "createdAt": "2026-09-27T13:57:31.498Z"
+    },
+    {
+      "id": "fu-l10-4",
+      "bizType": "LEAD",
+      "bizId": "l-11",
+      "method": "PHONE",
+      "result": "WECHAT_ADDED",
+      "content": "第 5 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-09-24T13:57:31.565Z"
+    },
+    {
+      "id": "fu-l10-3",
+      "bizType": "LEAD",
+      "bizId": "l-11",
+      "method": "WECHAT",
+      "result": "INTERESTED",
+      "content": "第 4 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-09-23T13:57:31.563Z"
+    },
+    {
+      "id": "fu-l5-1",
+      "bizType": "LEAD",
+      "bizId": "l-6",
+      "method": "WECHAT",
+      "result": "WECHAT_ADDED",
+      "content": "第 2 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-09-23T13:57:31.494Z"
+    },
+    {
+      "id": "fu-l10-2",
+      "bizType": "LEAD",
+      "bizId": "l-11",
+      "method": "PHONE",
+      "result": "OBSERVE",
+      "content": "第 3 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-09-22T13:57:31.557Z"
+    },
+    {
+      "id": "fu-l5-0",
+      "bizType": "LEAD",
+      "bizId": "l-6",
+      "method": "PHONE",
+      "result": "INTERESTED",
+      "content": "第 1 次沟通，介绍了课程大纲与上课安排，客户表示有兴趣进一步了解。",
+      "nextPlan": null,
+      "createdAt": "2026-09-22T13:57:31.493Z"
+    },
+    {
+      "id": "fu-l10-1",
+      "bizType": "LEAD",
+      "bizId": "l-11",
+      "method": "WECHAT",
+      "result": "WECHAT_ADDED",
+      "content": "第 2 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-09-21T13:57:31.556Z"
+    },
+    {
+      "id": "fu-l10-0",
+      "bizType": "LEAD",
+      "bizId": "l-11",
+      "method": "PHONE",
+      "result": "INTERESTED",
+      "content": "第 1 次沟通，介绍了课程大纲与上课安排，客户表示有兴趣进一步了解。",
+      "nextPlan": null,
+      "createdAt": "2026-09-20T13:57:31.555Z"
+    },
+    {
+      "id": "fu-l11-5",
+      "bizType": "LEAD",
+      "bizId": "l-12",
+      "method": "WECHAT",
+      "result": "OBSERVE",
+      "content": "第 6 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-09-17T13:57:31.624Z"
+    },
+    {
+      "id": "fu-l11-4",
+      "bizType": "LEAD",
+      "bizId": "l-12",
+      "method": "PHONE",
+      "result": "WECHAT_ADDED",
+      "content": "第 5 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-09-16T13:57:31.623Z"
+    },
+    {
+      "id": "fu-l11-3",
+      "bizType": "LEAD",
+      "bizId": "l-12",
+      "method": "WECHAT",
+      "result": "INTERESTED",
+      "content": "第 4 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-09-15T13:57:31.622Z"
+    },
+    {
+      "id": "fu-l11-2",
+      "bizType": "LEAD",
+      "bizId": "l-12",
+      "method": "PHONE",
+      "result": "OBSERVE",
+      "content": "第 3 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-09-14T13:57:31.622Z"
+    },
+    {
+      "id": "fu-l11-1",
+      "bizType": "LEAD",
+      "bizId": "l-12",
+      "method": "WECHAT",
+      "result": "WECHAT_ADDED",
+      "content": "第 2 次沟通，介绍了课程大纲与上课安排，客户表示会考虑后再决定。",
+      "nextPlan": null,
+      "createdAt": "2026-09-13T13:57:31.621Z"
+    },
+    {
+      "id": "fu-l11-0",
+      "bizType": "LEAD",
+      "bizId": "l-12",
+      "method": "PHONE",
+      "result": "INTERESTED",
+      "content": "第 1 次沟通，介绍了课程大纲与上课安排，客户表示有兴趣进一步了解。",
+      "nextPlan": null,
+      "createdAt": "2026-09-12T13:57:31.620Z"
+    }
+  ],
+  "counts": {
+    "all": 12,
+    "PENDING": 1,
+    "FOLLOWING": 6,
+    "PSEUDO": 1,
+    "CONVERTED": 3,
+    "TO_POOL": 2,
+    "OVERDUE": 3,
+    "NEVER": 2
+  }
+};</script>
+<script src="assets/compare.js"></script>
+</body>
+</html>

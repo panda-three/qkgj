@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>轻客管家 · 工程状态</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    background: #f8fafc; color: #1e293b; padding: 40px 24px; line-height: 1.6;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; }
+  h1 { font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+  .sub { color: #64748b; font-size: 14px; margin-bottom: 32px; }
+  .card {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 20px 24px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .bar { width: 3px; height: 15px; background: #3a63f0; border-radius: 2px; display: inline-block; }
+  .ok { color: #10b981; font-weight: 600; }
+  .no { color: #ef4444; font-weight: 600; }
+  .wait { color: #f59e0b; font-weight: 600; }
+  table { width: 100%; font-size: 13px; border-collapse: collapse; }
+  td { padding: 7px 0; border-bottom: 1px solid #f1f5f9; }
+  td:last-child { text-align: right; }
+  code {
+    background: #f1f5f9; padding: 2px 6px; border-radius: 4px;
+    font-family: ui-monospace, monospace; font-size: 12px;
+  }
+  pre {
+    background: #0f172a; color: #cbd5e1; padding: 14px 16px; border-radius: 8px;
+    font-size: 12.5px; overflow-x: auto; margin-top: 8px;
+  }
+  .foot { color: #94a3b8; font-size: 12px; text-align: center; margin-top: 32px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>轻客管家 · 工程状态</h1>
+  <p class="sub">面向互联网教育机构的智能 CRM　|　线索 → 商机 → 客户</p>
+
+  <div class="card">
+    <h2><span class="bar"></span>已完成</h2>
+    <table>
+      <tr><td>设计系统（48 令牌还原为 Tailwind v4 主题）</td><td class="ok">完成</td></tr>
+      <tr><td>数据模型（20 张表 + 全部索引）</td><td class="ok">完成</td></tr>
+      <tr><td>数据库建表 + 演示数据</td><td class="ok">完成</td></tr>
+      <tr><td>手机号部分唯一索引验证</td><td class="ok">通过</td></tr>
+      <tr><td>并发领取原子性验证</td><td class="ok">通过</td></tr>
+      <tr><td>业务常量（3 角色 / 三状态机 / 40 条规则）</td><td class="ok">完成</td></tr>
+      <tr><td>数据权限 SQL 拼接器</td><td class="ok">完成</td></tr>
+      <tr><td>登录页 + 看板页 + 布局组件</td><td class="ok">完成</td></tr>
+      <tr><td>转商机 / 转客户原子操作</td><td class="ok">完成</td></tr>
+      <tr><td>公海池领取与回收</td><td class="ok">完成</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="bar" style="background:#f59e0b"></span>进行中</h2>
+    <table>
+      <tr><td>依赖补齐（npm 在 .bin 链接阶段被沙箱拒绝，改用 tarball 手动安装）</td><td class="wait">进行中</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="bar" style="background:#94a3b8"></span>下一步</h2>
+    <table>
+      <tr><td>线索列表 / 详情页</td><td class="wait">待开发</td></tr>
+      <tr><td>商机管理（列表 + 阶段看板）</td><td class="wait">待开发</td></tr>
+      <tr><td>客户档案与时间轴</td><td class="wait">待开发</td></tr>
+      <tr><td>资源管理（课程 / 活动 / 渠道）</td><td class="wait">待开发</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="bar" style="background:#10b981"></span>演示账号</h2>
+    <table>
+      <tr><td>超级管理员　张启明　<code>A0001</code>　全系统数据</td><td class="ok">可登录</td></tr>
+      <tr><td>销售主管　　李文静　<code>A0002</code>　本部门及下属</td><td class="ok">可登录</td></tr>
+      <tr><td>销售顾问　　王小雨　<code>A0003</code>　仅本人 + 公海</td><td class="ok">可登录</td></tr>
+    </table>
+    <p style="margin-top:12px;font-size:13px;color:#64748b">统一密码：<code>Qingke@2026</code></p>
+  </div>
+
+  <p class="foot">轻客管家 · 开发计划 V1.0　|　生成于 2026-10-12</p>
+</div>
+</body>
+</html>

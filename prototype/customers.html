@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客户管理 · 轻客管家</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .days-left { display: flex; align-items: center; gap: 7px; }
+  .days-bar { width: 52px; }
+  .expire-warn { background: var(--danger-50); border-radius: 4px; padding: 2px 7px; color: var(--danger-700); font-weight: 600; }
+  .renew-flag { display: inline-flex; align-items: center; gap: 3px; color: var(--warning-700); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main-area">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">客户管理</h1>
+          <p class="page-desc">
+            客户为商机下游终态对象 · 由商机赢单转化自动建档 · 剩余服务 ≤ 30 天高亮提醒
+          </p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="btnExport">导出</button>
+          <button class="btn btn-primary" data-min="SALES_MANAGER" id="btnCreateCust">新建客户</button>
+        </div>
+      </div>
+
+      <!-- 统计 -->
+      <div class="stat-grid u-mb-16" style="grid-template-columns:repeat(5,1fr)">
+        <div class="stat-card is-success">
+          <div class="stat-head"><span class="stat-label">客户总数</span></div>
+          <div class="stat-value"><span class="u-mono">1,042</span></div>
+          <div class="stat-foot"><span class="u-muted">本月新增 38</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-head"><span class="stat-label">正常在读</span></div>
+          <div class="stat-value"><span class="u-mono">812</span></div>
+          <div class="stat-foot"><span class="u-muted">占比 77.9%</span></div>
+        </div>
+        <div class="stat-card is-warning">
+          <div class="stat-head"><span class="stat-label">30 天内到期</span></div>
+          <div class="stat-value"><span class="u-mono" style="color:var(--warning-700)">64</span></div>
+          <div class="stat-foot"><span class="u-warning-text">需续费跟进</span></div>
+        </div>
+        <div class="stat-card is-purple">
+          <div class="stat-head"><span class="stat-label">已结课</span></div>
+          <div class="stat-value"><span class="u-mono">118</span></div>
+          <div class="stat-foot"><span class="u-muted">可复购挖掘</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-head"><span class="stat-label">归档 / 退费</span></div>
+          <div class="stat-value"><span class="u-mono">48</span></div>
+          <div class="stat-foot"><span class="u-muted">退费 12 · 流失 36</span></div>
+        </div>
+      </div>
+
+      <!-- 筛选 -->
+      <div class="card u-mb-16">
+        <div class="filter-bar">
+          <div class="filter-grid">
+            <div class="filter-item">
+              <span class="filter-label">关键词</span>
+              <div class="search-box u-flex-1">
+                <span class="search-icon" id="kwIcon"></span>
+                <input class="input" id="kwInput" placeholder="姓名 / 手机号">
+              </div>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">客户状态</span>
+              <select class="select" id="fStatus">
+                <option value="">全部状态</option>
+                <option>正常在读</option><option>暂停服务</option><option>已结课</option><option>已退费</option><option>已流失</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">关联课程</span>
+              <select class="select"><option>全部课程</option><option>Python 数据分析</option><option>成人学历提升</option></select>
+            </div>
+            <div class="filter-item" data-min="SALES_MANAGER">
+              <span class="filter-label">归属人</span>
+              <select class="select"><option>全部</option><option>王小雨</option><option>陈思远</option></select>
+            </div>
+            <div class="filter-item" style="grid-column:span 2">
+              <span class="filter-label">成交日期</span>
+              <div class="u-flex u-gap-6 u-flex-1" style="min-width:0">
+                <input type="date" class="input"><span class="u-muted-sm">至</span><input type="date" class="input">
+              </div>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">到期状态</span>
+              <select class="select"><option value="">全部</option><option>30 天内到期</option><option>已到期</option></select>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">来源渠道</span>
+              <select class="select"><option>全部</option><option>抖音短视频</option><option>朋友转介绍</option></select>
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">归档状态</span>
+              <select class="select"><option value="">含已归档</option><option>仅未归档</option></select>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary" id="btnSearch">查询</button>
+            <button class="btn" id="btnReset">重置</button>
+            <span class="u-right u-muted-sm">服务记录一经提交不可编辑、不可删除</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title"><span class="title-bar"></span>客户列表<span class="u-muted-sm" style="font-weight:400">共 1,042 位</span></div>
+          <div class="u-center u-gap-8">
+            <button class="btn btn-sm" id="btnRenew">批量标记续费提醒</button>
+            <button class="btn btn-sm" data-min="SALES_MANAGER" id="btnArchive">批量归档</button>
+          </div>
+        </div>
+
+        <div class="batch-bar u-hidden" data-batch-bar>
+          <span>已选择 <strong data-batch-count>0</strong> 位客户</span>
+          <div class="u-right u-center u-gap-8">
+            <button class="btn btn-sm btn-primary" data-min="SALES_MANAGER" onclick="toast('info','原型演示：批量分配归属人')">批量分配</button>
+            <button class="btn btn-sm" onclick="toast('success','导出任务已创建')">批量导出</button>
+            <button class="btn btn-sm btn-ghost" onclick="cancelBatch()">取消选择</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="col-check"><label class="checkbox"><input type="checkbox" data-check-all><span class="box"></span></label></th>
+                <th>客户姓名 / 手机号</th>
+                <th data-col="course">关联课程</th>
+                <th data-col="amount">成交金额</th>
+                <th class="sortable" data-col="dealDate">成交日期<span class="sort-icon"></span></th>
+                <th data-col="status">客户状态</th>
+                <th data-col="owner" data-min="SALES_MANAGER">归属人</th>
+                <th data-col="expire">服务到期日</th>
+                <th data-col="left">剩余天数</th>
+                <th data-col="service">最后服务</th>
+                <th class="col-actions">操作</th>
+              </tr>
+            </thead>
+            <tbody id="custBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span class="page-info">第 1 - 20 条，共 1,042 条</span>
+          <div class="u-center u-gap-12">
+            <div class="page-size"><span>每页</span><select class="select"><option selected>20</option><option>50</option></select><span>条</span></div>
+            <div class="page-nav">
+              <button class="page-btn" disabled>‹</button>
+              <button class="page-btn active">1</button>
+              <button class="page-btn">2</button>
+              <button class="page-btn">3</button>
+              <span class="page-ellipsis">…</span>
+              <button class="page-btn">53</button>
+              <button class="page-btn">›</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+initPage({
+  key: 'customer',
+  breadcrumb: [{ text: '首页', href: 'dashboard.html' }, { text: '客户管理' }]
+});
+document.getElementById('kwIcon').innerHTML = icon('search', 15);
+document.querySelectorAll('th.sortable .sort-icon').forEach(el => el.innerHTML = icon('arrowUp', 12));
+
+/* ============ 数据 ============ */
+const CUSTOMERS = [
+  { id: 1, name: '冯雅琪', phone: '15867890123', course: '成人学历提升 · 专升本', amount: 4200, dealDate: '10-08', status: 'ACTIVE', owner: '赵磊', dept: '华东·二组', expire: '2027-04-15', left: 182, lastService: '10-09', renew: false, cls: 'avatar-f' },
+  { id: 2, name: '赵梓涵', phone: '13712349876', course: 'Python 数据分析训练营', amount: 6800, dealDate: '10-06', status: 'ACTIVE', owner: '陈思远', dept: '华东·一组', expire: '2026-11-02', left: 23,  lastService: '10-08', renew: true, cls: 'avatar-a', warn: true },
+  { id: 3, name: '孙浩然', phone: '15012348888', course: '青少年数学思维提升', amount: 3800, dealDate: '09-28', status: 'ACTIVE', owner: '王小雨', dept: '华东·一组', expire: '2026-10-25', left: 15, lastService: '10-06', renew: true, cls: 'avatar-c', warn: true },
+  { id: 4, name: '周子墨', phone: '15988776655', course: '少儿编程启蒙班', amount: 5600, dealDate: '09-20', status: 'PAUSED', owner: '赵磊', dept: '华东·二组', expire: '2026-12-10', left: 61, lastService: '09-30', renew: false, cls: 'avatar-d' },
+  { id: 5, name: '吴思彤', phone: '18655556666', course: 'Python 数据分析训练营', amount: 6800, dealDate: '08-15', status: 'COMPLETED', owner: '孙悦', dept: '华北·一组', expire: '2026-09-20', left: 0, lastService: '09-20', renew: true, cls: 'avatar-e' },
+  { id: 6, name: '郑凯文', phone: '13722223333', course: '职场演讲表达课', amount: 2980, dealDate: '09-12', status: 'ACTIVE', owner: '陈思远', dept: '华东·一组', expire: '2026-11-20', left: 41, lastService: '10-07', renew: false, cls: 'avatar-a' },
+  { id: 7, name: '何丽君', phone: '15833334444', course: '成人学历提升 · 专升本', amount: 4200, dealDate: '07-20', status: 'REFUNDED', owner: '王小雨', dept: '华东·一组', expire: '2026-10-20', left: 0, lastService: '08-15', renew: false, cls: 'avatar-c', muted: true },
+  { id: 8, name: '马晨曦', phone: '13944445555', course: '青少年英语听力强化', amount: 3200, dealDate: '10-01', status: 'ACTIVE', owner: '周杰', dept: '华东·一组', expire: '2026-12-28', left: 78, lastService: '10-09', renew: false, cls: 'avatar-b' },
+];
+
+function renderList() {
+  const body = document.getElementById('custBody');
+  const st = document.getElementById('fStatus').value;
+  const kw = document.getElementById('kwInput').value.trim();
+  let list = CUSTOMERS.slice();
+  const map = { 正常在读: 'ACTIVE', 暂停服务: 'PAUSED', 已结课: 'COMPLETED', 已退费: 'REFUNDED', 已流失: 'CHURNED' };
+  if (st) list = list.filter(c => c.status === map[st]);
+  if (kw) list = list.filter(c => c.name.includes(kw) || c.phone.includes(kw));
+
+  if (!list.length) {
+    body.innerHTML = `<tr><td colspan="11"><div class="empty-state">
+      <div class="empty-icon">${icon('inbox', 26)}</div>
+      <div class="empty-title">没有符合条件的客户</div>
+      <div class="empty-desc">客户由商机赢单转化自动建档，可调整筛选条件后重试</div></div></td></tr>`;
+    return;
+  }
+
+  body.innerHTML = list.map(c => {
+    const leftCell = c.left <= 0
+      ? '<span class="u-muted-sm">已到期</span>'
+      : (c.left <= 30
+        ? `<span class="expire-warn">${c.left} 天</span>`
+        : `<div class="days-left">
+             <div class="days-bar mini-bar-track"><div class="mini-bar ${c.left <= 60 ? 'is-warning' : ''}" style="width:${Math.min(100, (c.left / 200) * 100)}%"></div></div>
+             <span class="u-muted-sm">${c.left} 天</span>
+           </div>`);
+    return `<tr class="${c.muted ? 'row-muted' : c.warn ? 'row-warning' : ''}">
+      <td class="col-check"><label class="checkbox"><input type="checkbox" data-check-row="${c.id}"><span class="box"></span></label></td>
+      <td>
+        <div class="user-cell">
+          <span class="avatar avatar-sm ${c.cls}">${c.name[0]}</span>
+          <div>
+            <div class="cell-main">${c.name}</div>
+            <div class="cell-sub masked-phone" data-phone="${c.phone}">
+              <span class="phone-text">${maskPhone(c.phone)}</span>
+              <span class="eye-btn" style="margin-left:4px">${icon('eye', 13)}</span>
+            </div>
+          </div>
+        </div>
+      </td>
+      <td><span class="u-muted-sm">${c.course}</span></td>
+      <td><span class="u-strong u-danger-text u-mono">${money(c.amount)}</span></td>
+      <td><span class="u-mono u-muted-sm">${c.dealDate}</span></td>
+      <td>${statusTag(c.status)}${c.renew ? `<div class="renew-flag u-mt-4">${icon('star', 12)}续费标记</div>` : ''}</td>
+      <td data-min="SALES_MANAGER">
+        <div class="user-cell"><span class="avatar avatar-sm ${c.cls}" style="width:20px;height:20px;font-size:10px">${c.owner[0]}</span>${c.owner}</div>
+      </td>
+      <td><span class="u-mono u-muted-sm">${c.expire}</span></td>
+      <td>${leftCell}</td>
+      <td><span class="u-muted-sm">${c.lastService}</span></td>
+      <td class="col-actions">
+        <div class="link-actions">
+          <span onclick="location.href='customer-detail.html'">档案</span>
+          <span onclick="toast('info','原型演示：添加服务记录')">服务记录</span>
+          <span onclick="toast('info','原型演示：续费提醒')">续费</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  bindPhoneEyes(body);
+  bindSelectAll(document);
+  applyPerms(body, currentRole());
+}
+renderList();
+
+/* ============ 筛选 ============ */
+document.getElementById('btnSearch').addEventListener('click', () => { renderList(); toast('info', '已按当前条件查询'); });
+document.getElementById('kwInput').addEventListener('keydown', e => { if (e.key === 'Enter') renderList(); });
+document.getElementById('fStatus').addEventListener('change', renderList);
+document.getElementById('btnReset').addEventListener('click', () => {
+  document.getElementById('kwInput').value = '';
+  document.getElementById('fStatus').value = '';
+  document.querySelectorAll('.filter-grid select').forEach(s => s.selectedIndex = 0);
+  renderList();
+  toast('success', '筛选条件已重置');
+});
+function cancelBatch() {
+  document.querySelectorAll('[data-check-row]').forEach(r => { r.checked = false; r.closest('tr')?.classList.remove('is-selected'); });
+  const all = document.querySelector('[data-check-all]');
+  if (all) all.checked = false;
+  updateBatchBar(document);
+}
+
+/* ============ 新建客户 ============ */
+document.getElementById('btnCreateCust').addEventListener('click', () => {
+  openModal({
+    title: '手动新建客户',
+    sub: '常规客户应由商机赢单转化自动建档',
+    size: 'lg',
+    body: `<div class="alert alert-warning u-mb-16">
+        <span class="alert-icon">${icon('alert', 17)}</span>
+        <div>仅<b>超级管理员与销售主管</b>可手动建档，销售顾问无此权限。常规成交请走「商机赢单 → 转客户」以保证数据链路完整。</div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label class="field-label">姓名 <span class="req">*</span></label><input class="input"></div>
+        <div class="field"><label class="field-label">手机号 <span class="req">*</span></label><input class="input" maxlength="11"></div>
+        <div class="field"><label class="field-label">性别</label><select class="select"><option>未知</option><option>男</option><option>女</option></select></div>
+        <div class="field"><label class="field-label">来源渠道</label><select class="select"><option>抖音短视频</option><option>朋友转介绍</option></select></div>
+        <div class="field col-span-2"><label class="field-label">关联课程 <span class="req">*</span></label><select class="select"><option value="">请选择</option><option>Python 数据分析训练营</option></select></div>
+        <div class="field"><label class="field-label">成交金额 <span class="req">*</span></label><input class="input" type="number"></div>
+        <div class="field"><label class="field-label">成交日期 <span class="req">*</span></label><input type="date" class="input"></div>
+        <div class="field"><label class="field-label">服务开始日</label><input type="date" class="input"></div>
+        <div class="field"><label class="field-label">服务到期日</label><input type="date" class="input"></div>
+        <div class="field col-span-2"><label class="field-label">备注</label><textarea class="textarea"></textarea></div>
+      </div>`,
+    footer: `<button class="btn" data-modal-close>取消</button>
+             <button class="btn btn-primary" data-modal-close onclick="toast('success','客户建档成功')">创建客户</button>`,
+  });
+});
+
+/* ============ 批量操作 ============ */
+document.getElementById('btnRenew').addEventListener('click', () => {
+  const ids = getCheckedIds(document.getElementById('custBody'));
+  if (!ids.length) { toast('warning', '请先勾选客户'); return; }
+  confirmModal({
+    title: '批量标记续费提醒',
+    okText: '确认标记',
+    message: `将所选 <b>${ids.length}</b> 位客户标记为「续费提醒」，用于服务到期前的续费跟进。`,
+    onOk: () => toast('success', `已标记 ${ids.length} 位客户为续费提醒`),
+  });
+});
+document.getElementById('btnArchive').addEventListener('click', () => {
+  const ids = getCheckedIds(document.getElementById('custBody'));
+  if (!ids.length) { toast('warning', '请先勾选客户'); return; }
+  confirmModal({
+    title: '批量归档客户',
+    tone: 'danger',
+    okType: 'danger',
+    okText: '确认归档',
+    message: `归档后所选 <b>${ids.length}</b> 位客户<b>默认不再出现在列表</b>中，仍可通过筛选条件查询到。`,
+    onOk: () => toast('success', `已归档 ${ids.length} 位客户`),
+  });
+});
+document.getElementById('btnExport').addEventListener('click', () => {
+  toast('success', '导出任务已创建，客户手机号按脱敏规则处理（导出行为已记录日志）');
+});
+</script>
+</body>
+</html>

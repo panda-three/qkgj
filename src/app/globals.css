@@ -1,0 +1,294 @@
+/* ==========================================================================
+   轻客管家 · 设计系统（TailwindCSS v4 @theme）
+   令牌来源：prototype/assets/css/style.css 的 48 个 CSS 变量，
+   并补齐原文中约 30 个未变量化的硬编码色值。
+   约定：业务代码中禁止出现任意色值，一律使用本文件定义的语义令牌。
+   ========================================================================== */
+
+@import 'tailwindcss';
+
+@theme {
+  /* ---------- 主色 10 级 ---------- */
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dbe6ff;
+  --color-brand-200: #bed1ff;
+  --color-brand-300: #91b2ff;
+  --color-brand-400: #5d86fb;
+  --color-brand-500: #3a63f0;
+  --color-brand-600: #2647d8;
+  --color-brand-700: #1e37ad;
+  --color-brand-800: #1c3189;
+  --color-brand-900: #1b2d6d;
+
+  /* ---------- 中性色 11 级 ----------
+     与 Tailwind 默认 slate 同值，统一重命名为 ink。
+     业务代码禁止再使用 slate-*，避免两套并存。 */
+  --color-ink-50: #f8fafc;
+  --color-ink-100: #f1f5f9;
+  --color-ink-200: #e2e8f0;
+  --color-ink-300: #cbd5e1;
+  --color-ink-400: #94a3b8;
+  --color-ink-500: #64748b;
+  --color-ink-600: #475569;
+  --color-ink-700: #334155;
+  --color-ink-800: #1e293b;
+  --color-ink-900: #0f172a;
+  --color-white: #ffffff;
+
+  /* ---------- 语义色：成功 ---------- */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #a7f3d0;
+  --color-success-300: #34d399;
+  --color-success-500: #10b981;
+  --color-success-700: #047857;
+
+  /* ---------- 语义色：警告 ---------- */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fde68a;
+  --color-warning-300: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-700: #b45309;
+
+  /* ---------- 语义色：危险 ---------- */
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fecaca;
+  --color-danger-300: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-700: #b91c1c;
+
+  /* ---------- 语义色：信息 ---------- */
+  --color-info-50: #eff6ff;
+  --color-info-100: #bae6fd;
+  --color-info-500: #0ea5e9;
+  --color-info-700: #0369a1;
+
+  /* ---------- 语义色：紫 ---------- */
+  --color-purple-50: #f5f3ff;
+  --color-purple-100: #ddd6fe;
+  --color-purple-300: #a78bfa;
+  --color-purple-500: #8b5cf6;
+  --color-purple-700: #6d28d9;
+
+  /* ---------- 侧栏专用色 ----------
+     原型侧栏为深色底 (#101828)，不并入 ink 阶梯，单独定义。 */
+  --color-sidebar-bg: #101828;
+  --color-sidebar-border: rgb(255 255 255 / 6%);
+  --color-sidebar-hover: rgb(255 255 255 / 6%);
+  --color-sidebar-text: #cbd5e1;
+
+  /* ---------- 头像渐变 6 组 ----------
+     原型 .avatar-a ~ .avatar-f 的 linear-gradient(135deg, X, Y) */
+  --color-avatar-a-from: #6366f1;
+  --color-avatar-a-to: #8b5cf6;
+  --color-avatar-b-from: #06b6d4;
+  --color-avatar-b-to: #3b82f6;
+  --color-avatar-c-from: #10b981;
+  --color-avatar-c-to: #14b8a6;
+  --color-avatar-d-from: #f59e0b;
+  --color-avatar-d-to: #f97316;
+  --color-avatar-e-from: #ec4899;
+  --color-avatar-e-to: #f43f5e;
+  --color-avatar-f-from: #64748b;
+  --color-avatar-f-to: #475569;
+
+  /* ---------- 表格行态色 ----------
+     原型中 row-danger:hover 的深红底 #fee2e2、selected 底色等 */
+  --color-row-selected: var(--color-brand-50);
+  --color-row-danger: var(--color-danger-50);
+  --color-row-danger-hover: #fee2e2;
+  --color-row-warning: var(--color-warning-50);
+  --color-row-muted: var(--color-ink-50);
+
+  /* ---------- 圆角 ---------- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* ---------- 阴影 ---------- */
+  --shadow-xs: 0 1px 2px rgb(15 23 42 / 5%);
+  --shadow-sm: 0 1px 3px rgb(15 23 42 / 7%), 0 1px 2px rgb(15 23 42 / 4%);
+  --shadow-md: 0 4px 12px rgb(15 23 42 / 8%);
+  --shadow-lg: 0 12px 32px rgb(15 23 42 / 12%);
+  --shadow-xl: 0 24px 60px rgb(15 23 42 / 18%);
+
+  /* ---------- 字体 ---------- */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial,
+    sans-serif;
+
+  /* ---------- 布局尺寸 ---------- */
+  --spacing-sidebar: 232px;
+  --spacing-sidebar-collapsed: 64px;
+  --spacing-topbar: 60px;
+
+  /* ---------- 动效 ---------- */
+  --ease-ui: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   基础层
+   ========================================================================== */
+@layer base {
+  * {
+    border-color: var(--color-ink-200);
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-ink-800);
+    background: var(--color-ink-50);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-ink-300);
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-400);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* ==========================================================================
+   组件层：跨页面复用的复合样式
+   ========================================================================== */
+@layer components {
+  /* ---------- 表格行态与sticky 操作列 ----------
+     原型为 .col-actions 写了 7 条规则让操作列背景跟随行态，
+     此处用 CSS 变量一行解决，避免逐条复写。 */
+  .data-table {
+    width: 100%;
+    font-size: 13px;
+    min-width: 1080px;
+  }
+
+  .data-table tbody tr {
+    --row-bg: var(--color-white);
+    transition: background var(--transition-ui);
+  }
+  .data-table tbody tr:hover,
+  .data-table tbody tr.is-selected {
+    --row-bg: var(--color-brand-50);
+  }
+  .data-table tbody tr.row-danger {
+    --row-bg: var(--color-danger-50);
+  }
+  .data-table tbody tr.row-danger:hover {
+    --row-bg: var(--color-row-danger-hover);
+  }
+  .data-table tbody tr.row-warning {
+    --row-bg: var(--color-warning-50);
+  }
+  .data-table tbody tr.row-muted {
+    --row-bg: var(--color-ink-50);
+    color: var(--color-ink-400);
+  }
+
+  .data-table .col-actions {
+    position: sticky;
+    right: 0;
+    z-index: 3;
+    background: var(--row-bg);
+    box-shadow: -6px 0 8px -6px rgb(15 23 42 / 18%);
+  }
+  .data-table thead th.col-actions {
+    z-index: 4;
+    background: var(--color-ink-50);
+  }
+
+  /* ---------- 统计卡右上角装饰圆 ----------
+     原型用伪元素无法按 tone 换色，改为真实元素 + tone class。 */
+  .stat-decor {
+    position: absolute;
+    right: -18px;
+    top: -18px;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .stat-decor-brand {
+    background: var(--color-brand-50);
+  }
+  .stat-decor-success {
+    background: var(--color-success-50);
+  }
+  .stat-decor-warning {
+    background: var(--color-warning-50);
+  }
+  .stat-decor-danger {
+    background: var(--color-danger-50);
+  }
+  .stat-decor-purple {
+    background: var(--color-purple-50);
+  }
+  .stat-decor-info {
+    background: var(--color-info-50);
+  }
+
+  /* ---------- 表格单元格 ---------- */
+  .cell-main {
+    font-weight: 500;
+    color: var(--color-ink-900);
+    white-space: nowrap;
+  }
+  .cell-sub {
+    font-size: 12px;
+    color: var(--color-ink-400);
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+
+  /* ---------- 数字等宽（金额、计数对齐） ---------- */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+}
+
+/* ==========================================================================
+   工具层
+   ========================================================================== */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 12%);
+    border-radius: 4px;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}

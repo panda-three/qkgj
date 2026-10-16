@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据看板 · 轻客管家</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .kpi-row { display: grid; gap: 14px; grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 1440px) { .kpi-row { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 620px) { .kpi-row { grid-template-columns: 1fr; } }
+
+  .dash-grid-top { display: grid; gap: 14px; grid-template-columns: 1fr 340px; }
+  .dash-grid-mid { display: grid; gap: 14px; grid-template-columns: 1.55fr 1fr; }
+  @media (max-width: 1280px) {
+    .dash-grid-top, .dash-grid-mid { grid-template-columns: 1fr; }
+  }
+
+  .goal-card {
+    display: flex; align-items: center; gap: 18px;
+    padding: 14px 16px; border-radius: var(--radius-sm);
+    background: var(--ink-50); border: 1px solid var(--ink-100);
+  }
+  .goal-list { flex: 1; display: flex; flex-direction: column; gap: 11px; }
+  .goal-item { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+  .goal-name { width: 84px; color: var(--ink-600); flex-shrink: 0; }
+  .goal-pct { width: 46px; text-align: right; font-weight: 600; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+  .channel-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    border-bottom: 1px dashed var(--ink-100); font-size: 12.5px;
+  }
+  .channel-row:last-child { border-bottom: none; }
+  .channel-name { width: 76px; color: var(--ink-700); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+  .channel-cost { width: 62px; text-align: right; color: var(--ink-500); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .channel-roi { width: 50px; text-align: right; font-weight: 700; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+  .lead-row {
+    display: flex; align-items: center; gap: 11px; padding: 10px 0;
+    border-bottom: 1px dashed var(--ink-100); cursor: pointer;
+  }
+  .lead-row:last-child { border-bottom: none; }
+  .lead-row:hover .lead-name { color: var(--brand-600); }
+  .lead-name { font-size: 13.5px; font-weight: 500; color: var(--ink-900); transition: var(--transition); }
+  .lead-course { font-size: 12px; color: var(--ink-400); margin-top: 2px; }
+
+  .rank-table td { padding: 9px 10px; border-bottom: 1px dashed var(--ink-100); font-size: 13px; }
+  .rank-table tr:last-child td { border-bottom: none; }
+  .rank-table tbody tr:hover { background: var(--brand-50); cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main-area">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="page">
+      <!-- 页面头 -->
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">
+            数据看板
+            <span class="tag tag-success" style="font-weight:500">
+              <span class="dot dot-success"></span>数据实时
+            </span>
+          </h1>
+          <p class="page-desc">
+            统计口径按当前角色数据权限聚合 ·
+            看板缓存 5 分钟，「我的待办」为实时数据
+          </p>
+        </div>
+        <div class="page-actions">
+          <div class="segmented" id="timeRange">
+            <button class="active" data-range="今日">今日</button>
+            <button data-range="本周">本周</button>
+            <button data-range="本月">本月</button>
+            <button data-range="自定义">自定义</button>
+          </div>
+          <button class="btn" id="btnExport">导出报表</button>
+        </div>
+      </div>
+
+      <!-- 核心指标卡 -->
+      <div class="kpi-row">
+        <div class="stat-card">
+          <div class="stat-head">
+            <span class="stat-label">线索总量</span>
+            <span class="stat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></span>
+          </div>
+          <div class="stat-value"><span class="u-mono" id="kpiLead">1,286</span></div>
+          <div class="stat-foot">
+            <span class="trend trend-up">↑ 12.4%</span>
+            <span>较上周期</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-head">
+            <span class="stat-label">待跟进线索</span>
+            <span class="stat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+          </div>
+          <div class="stat-value"><span class="u-mono">342</span></div>
+          <div class="stat-foot">
+            <span class="u-warning-text u-strong">26 条今日到期</span>
+          </div>
+        </div>
+        <div class="stat-card is-warning">
+          <div class="stat-head">
+            <span class="stat-label">超期未跟进</span>
+            <span class="stat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+          </div>
+          <div class="stat-value"><span class="u-mono" style="color:var(--danger-500)">47</span></div>
+          <div class="stat-foot">
+            <span class="trend trend-down">↑ 8 条</span>
+            <span>需主管督导</span>
+          </div>
+        </div>
+        <div class="stat-card is-success">
+          <div class="stat-head">
+            <span class="stat-label">线索转商机率</span>
+            <span class="stat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg></span>
+          </div>
+          <div class="stat-value"><span class="u-mono">32.6</span><span class="unit">%</span></div>
+          <div class="stat-foot">
+            <span class="trend trend-up">↑ 2.1pt</span>
+            <span>目标 ≥ 30%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-row u-mt-16">
+        <div class="stat-card is-purple">
+          <div class="stat-head">
+            <span class="stat-label">商机总量</span>
+            <span class="stat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+          </div>
+          <div class="stat-value"><span class="u-mono">419</span></div>
+          <div class="stat-foot"><span class="u-muted">跟进中 268 · 谈判中 96</span></div>
+        </div>
+        <div class="stat-card is-success">
+          <div class="stat-head">
+            <span class="stat-label">赢单数 / 赢单率</span>
+            <span class="stat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span>
+          </div>
+          <div class="stat-value"><span class="u-mono">118</span><span class="unit">/ 28.2%</span></div>
+          <div class="stat-foot">
+            <span class="trend trend-up">↑ 3.4pt</span>
+            <span>目标 ≥ 25%</span>
+          </div>
+        </div>
+        <div class="stat-card is-warning">
+          <div class="stat-head">
+            <span class="stat-label">预计成交金额</span>
+            <span class="stat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></span>
+          </div>
+          <div class="stat-value"><span class="u-mono">286.4</span><span class="unit">万</span></div>
+          <div class="stat-foot"><span class="u-muted">跟进中 + 谈判中合计</span></div>
+        </div>
+        <div class="stat-card is-success">
+          <div class="stat-head">
+            <span class="stat-label">实际成交金额</span>
+            <span class="stat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+          </div>
+          <div class="stat-value"><span class="u-mono">173.8</span><span class="unit">万</span></div>
+          <div class="stat-foot">
+            <span class="trend trend-up">↑ 18.6%</span>
+            <span>同比</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 漏斗 + 待办 -->
+      <div class="dash-grid-top u-mt-16">
+        <!-- 转化漏斗 -->
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title"><span class="title-bar"></span>转化漏斗</div>
+              <div class="u-muted-sm u-mt-0" style="margin-top:4px">
+                线索总量 → 已跟进 → 转商机 → 谈判中 → 赢单，点击漏斗层可下钻明细
+              </div>
+            </div>
+            <div class="u-center u-gap-8">
+              <div class="segmented" id="funnelDim">
+                <button class="active" data-dim="department">按部门</button>
+                <button data-dim="consultant">按顾问</button>
+                <button data-dim="channel">按渠道</button>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="funnel" id="funnelBox"></div>
+          </div>
+        </div>
+
+        <!-- 我的待办 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="title-bar" style="background:var(--warning-500)"></span>我的待跟进</div>
+            <a class="u-link" style="font-size:12.5px" href="leads.html">全部 →</a>
+          </div>
+          <div class="card-body" style="padding:8px 18px 14px;max-height:432px;overflow-y:auto">
+            <div id="todoList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 趋势 + 排行 -->
+      <div class="dash-grid-mid u-mt-16">
+        <!-- 转化趋势 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="title-bar"></span>转化趋势</div>
+            <div class="u-center u-gap-12">
+              <div class="chart-legend" id="trendLegend"></div>
+              <div class="segmented" id="trendMetric">
+                <button class="active" data-metric="count">数量</button>
+                <button data-metric="amount">金额</button>
+              </div>
+              <div class="segmented" id="trendRange">
+                <button data-days="7">7天</button>
+                <button class="active" data-days="14">14天</button>
+                <button data-days="30">30天</button>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="chart-box" id="trendChart"></div>
+          </div>
+        </div>
+
+        <!-- 顾问业绩排行 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="title-bar" style="background:var(--purple-500)"></span>顾问业绩排行</div>
+            <div class="segmented" id="rankMetric">
+              <button data-metric="won">赢单数</button>
+              <button class="active" data-metric="convert">转商机</button>
+              <button data-metric="amount">成交额</button>
+            </div>
+          </div>
+          <div class="card-body flush" style="padding:6px 18px 12px">
+            <table class="rank-table">
+              <thead>
+                <tr class="u-muted-sm">
+                  <th style="width:44px">排名</th>
+                  <th>顾问 / 部门</th>
+                  <th style="width:110px">达成进度</th>
+                  <th style="width:66px;text-align:right">业绩</th>
+                </tr>
+              </thead>
+              <tbody id="rankBody"></tbody>
+            </table>
+            <div class="u-muted-sm u-mt-12" style="text-align:center">
+              达成率基于本月目标 · <span class="u-link" data-min="SUPER_ADMIN">目标配置仅超管可见</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 预警 + 渠道 ROI + 目标 -->
+      <div class="grid grid-3 u-mt-16">
+        <!-- 超期预警 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="title-bar" style="background:var(--danger-500)"></span>超期预警</div>
+            <span class="tag tag-danger">共 47 条</span>
+          </div>
+          <div class="card-body" style="padding:8px 18px 14px;max-height:320px;overflow-y:auto">
+            <div id="alertList"></div>
+          </div>
+        </div>
+
+        <!-- 渠道 ROI -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="title-bar" style="background:var(--success-500)"></span>渠道 ROI</div>
+            <a class="u-link" style="font-size:12.5px" href="resources.html">渠道管理 →</a>
+          </div>
+          <div class="card-body" style="padding:8px 18px 14px">
+            <div id="channelRoi"></div>
+          </div>
+        </div>
+
+        <!-- 目标达成 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="title-bar" style="background:var(--brand-500)"></span>本月目标达成</div>
+            <span class="u-muted-sm">10 月</span>
+          </div>
+          <div class="card-body">
+            <div class="goal-card">
+              <div id="winDonut" style="flex-shrink:0"></div>
+              <div class="goal-list">
+                <div class="goal-item">
+                  <span class="goal-name">线索目标</span>
+                  <div class="mini-bar-track"><div class="mini-bar" style="width:86%"></div></div>
+                  <span class="goal-pct">86%</span>
+                </div>
+                <div class="goal-item">
+                  <span class="goal-name">商机目标</span>
+                  <div class="mini-bar-track"><div class="mini-bar is-purple" style="width:72%"></div></div>
+                  <span class="goal-pct">72%</span>
+                </div>
+                <div class="goal-item">
+                  <span class="goal-name">赢单目标</span>
+                  <div class="mini-bar-track"><div class="mini-bar is-success" style="width:61%"></div></div>
+                  <span class="goal-pct">61%</span>
+                </div>
+                <div class="goal-item">
+                  <span class="goal-name">成交额目标</span>
+                  <div class="mini-bar-track"><div class="mini-bar is-warning" style="width:78%"></div></div>
+                  <span class="goal-pct">78%</span>
+                </div>
+              </div>
+            </div>
+            <div class="alert alert-info u-mt-12">
+              <span class="alert-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span>
+              <div>距月末还有 21 天，按当前节奏预计赢单可达 <strong>138 单</strong>（目标 120 单）。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+/* ============ 初始化 ============ */
+initPage({
+  key: 'dashboard',
+  breadcrumb: [{ text: '首页', href: 'dashboard.html' }, { text: '数据看板' }]
+});
+
+/* ============ 漏斗 ============ */
+const FUNNEL_DATA = {
+  department: [
+    { name: '线索总量', value: 1286 },
+    { name: '已跟进',   value: 1042 },
+    { name: '转商机',   value: 419 },
+    { name: '谈判中',   value: 168 },
+    { name: '赢单',     value: 118 },
+  ],
+  consultant: [
+    { name: '线索总量', value: 1286 },
+    { name: '已跟进',   value: 986 },
+    { name: '转商机',   value: 352 },
+    { name: '谈判中',   value: 131 },
+    { name: '赢单',     value: 84 },
+  ],
+  channel: [
+    { name: '线索总量', value: 1286 },
+    { name: '已跟进',   value: 1098 },
+    { name: '转商机',   value: 468 },
+    { name: '谈判中',   value: 196 },
+    { name: '赢单',     value: 142 },
+  ],
+};
+renderFunnel(document.getElementById('funnelBox'), FUNNEL_DATA.department);
+document.getElementById('funnelDim').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-dim]');
+  if (!btn) return;
+  e.currentTarget.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFunnel(document.getElementById('funnelBox'), FUNNEL_DATA[btn.dataset.dim]);
+});
+
+/* ============ 转化趋势 ============ */
+const TREND_DATA = {
+  7: {
+    labels: ['10/04','10/05','10/06','10/07','10/08','10/09','10/10'],
+    lead: [142, 168, 155, 191, 176, 203, 186],
+    won:  [18, 24, 21, 29, 26, 32, 28],
+    leadAmt: [42.8, 51.2, 47.6, 58.4, 53.9, 62.1, 57.2],
+    wonAmt:  [5.2, 7.1, 6.4, 8.8, 7.9, 9.6, 8.4],
+  },
+  14: {
+    labels: ['9/27','9/28','9/29','9/30','10/1','10/2','10/3','10/4','10/5','10/6','10/7','10/8','10/9','10/10'],
+    lead: [128, 145, 133, 156, 118, 96, 134, 142, 168, 155, 191, 176, 203, 186],
+    won:  [16, 19, 15, 22, 14, 11, 17, 18, 24, 21, 29, 26, 32, 28],
+    leadAmt: [38.2, 44.6, 40.1, 48.3, 35.4, 28.7, 41.2, 42.8, 51.2, 47.6, 58.4, 53.9, 62.1, 57.2],
+    wonAmt:  [4.6, 5.8, 4.4, 6.7, 4.1, 3.2, 5.1, 5.2, 7.1, 6.4, 8.8, 7.9, 9.6, 8.4],
+  },
+  30: {
+    labels: ['9/11','9/14','9/17','9/20','9/23','9/26','9/29','10/2','10/5','10/8','10/10'],
+    lead: [402, 438, 391, 456, 478, 412, 445, 348, 514, 476, 186],
+    won:  [52, 61, 48, 66, 71, 58, 63, 44, 79, 68, 28],
+    leadAmt: [121.4, 133.2, 118.6, 139.8, 146.3, 125.1, 134.8, 104.2, 156.4, 143.7, 57.2],
+    wonAmt:  [15.2, 18.4, 14.1, 19.8, 21.3, 17.2, 18.6, 12.8, 23.4, 20.1, 8.4],
+  },
+};
+
+let trendDays = 14, trendMetric = 'count';
+
+function renderTrend() {
+  const d = TREND_DATA[trendDays];
+  const isAmt = trendMetric === 'amount';
+  const chart = document.getElementById('trendChart');
+  lineChart(chart, {
+    labels: d.labels,
+    height: 250,
+    series: [
+      { key: 'lead', name: isAmt ? '线索金额(万)' : '新增线索', color: '#3a63f0', data: isAmt ? d.leadAmt : d.lead, fill: true, unit: isAmt ? '万元' : '条' },
+      { key: 'won',  name: isAmt ? '赢单金额(万)' : '新增赢单', color: '#10b981', data: isAmt ? d.wonAmt : d.won, axis: 'right', unit: isAmt ? '万元' : '单' },
+    ],
+  });
+  document.getElementById('trendLegend').innerHTML = `
+    <span class="legend-item"><span class="legend-swatch is-line" style="background:#3a63f0"></span>${isAmt ? '线索金额' : '新增线索'}</span>
+    <span class="legend-item"><span class="legend-swatch is-line" style="background:#10b981"></span>${isAmt ? '赢单金额' : '新增赢单'}</span>
+    <span class="legend-item u-muted-sm">左轴：${isAmt ? '万元' : '条'}　右轴：${isAmt ? '万元' : '单'}</span>`;
+}
+renderTrend();
+
+document.getElementById('trendRange').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-days]');
+  if (!btn) return;
+  e.currentTarget.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  trendDays = +btn.dataset.days;
+  renderTrend();
+});
+document.getElementById('trendMetric').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-metric]');
+  if (!btn) return;
+  e.currentTarget.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  trendMetric = btn.dataset.metric;
+  renderTrend();
+});
+
+/* ============ 顾问排行 ============ */
+const RANK_DATA = {
+  convert: [
+    { name: '陈思远', dept: '华东·一组', value: 46, target: 50, cls: 'avatar-a' },
+    { name: '王小雨', dept: '华东·一组', value: 41, target: 50, cls: 'avatar-c' },
+    { name: '赵磊',   dept: '华东·二组', value: 38, target: 45, cls: 'avatar-d' },
+    { name: '孙悦',   dept: '华北·一组', value: 34, target: 45, cls: 'avatar-e' },
+    { name: '周杰',   dept: '华东·一组', value: 29, target: 40, cls: 'avatar-b' },
+    { name: '吴敏',   dept: '华北·二组', value: 24, target: 40, cls: 'avatar-f' },
+  ],
+  won: [
+    { name: '王小雨', dept: '华东·一组', value: 28, target: 30, cls: 'avatar-c' },
+    { name: '陈思远', dept: '华东·一组', value: 24, target: 30, cls: 'avatar-a' },
+    { name: '孙悦',   dept: '华北·一组', value: 19, target: 25, cls: 'avatar-e' },
+    { name: '赵磊',   dept: '华东·二组', value: 17, target: 25, cls: 'avatar-d' },
+    { name: '周杰',   dept: '华东·一组', value: 13, target: 20, cls: 'avatar-b' },
+    { name: '吴敏',   dept: '华北·二组', value: 9,  target: 20, cls: 'avatar-f' },
+  ],
+  amount: [
+    { name: '王小雨', dept: '华东·一组', value: 42.6, target: 45, cls: 'avatar-c' },
+    { name: '陈思远', dept: '华东·一组', value: 38.2, target: 45, cls: 'avatar-a' },
+    { name: '孙悦',   dept: '华北·一组', value: 31.4, target: 40, cls: 'avatar-e' },
+    { name: '赵磊',   dept: '华东·二组', value: 27.8, target: 35, cls: 'avatar-d' },
+    { name: '周杰',   dept: '华东·一组', value: 19.6, target: 30, cls: 'avatar-b' },
+    { name: '吴敏',   dept: '华北·二组', value: 14.2, target: 25, cls: 'avatar-f' },
+  ],
+};
+const RANK_UNIT = { convert: '单', won: '单', amount: '万' };
+
+function renderRank(metric) {
+  const list = RANK_DATA[metric];
+  const maxTarget = Math.max(...list.map(i => i.target));
+  document.getElementById('rankBody').innerHTML = list.map((item, i) => {
+    const pct = Math.min(100, Math.round((item.value / item.target) * 100));
+    const barCls = pct >= 90 ? 'is-success' : pct >= 70 ? '' : 'is-warning';
+    return `<tr onclick="toast('info','原型演示：查看「${item.name}」的业绩明细')">
+      <td><span class="rank-no ${i < 3 ? 'top-' + (i + 1) : ''}">${i + 1}</span></td>
+      <td>
+        <div class="user-cell">
+          <span class="avatar avatar-sm ${item.cls}">${item.name[0]}</span>
+          <div>
+            <div class="u-strong" style="font-size:13px">${item.name}</div>
+            <div class="u-muted-sm">${item.dept}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="u-center u-gap-6">
+          <div class="mini-bar-track"><div class="mini-bar ${barCls}" style="width:${pct}%"></div></div>
+          <span class="u-muted-sm" style="width:32px;text-align:right">${pct}%</span>
+        </div>
+      </td>
+      <td style="text-align:right">
+        <span class="u-strong u-mono">${item.value}</span>
+        <span class="u-muted-sm">${RANK_UNIT[metric]}</span>
+      </td>
+    </tr>`;
+  }).join('');
+}
+renderRank('convert');
+
+document.getElementById('rankMetric').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-metric]');
+  if (!btn) return;
+  e.currentTarget.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRank(btn.dataset.metric);
+});
+
+/* ============ 我的待跟进 ============ */
+const TODOS = [
+  { name: '林雅琴', course: 'Python 数据分析训练营', time: '今日 10:30', type: '跟进', level: 'high',  overdue: '逾期 6 小时' },
+  { name: '何俊豪', course: '青少年数学思维提升', time: '今日 14:00', type: '跟进', level: 'mid',   overdue: '' },
+  { name: '苏婉清', course: '成人学历提升 · 专升本', time: '明日 10:00', type: '跟进', level: 'low',   overdue: '' },
+  { name: '黄志远', course: '职场演讲表达课', time: '已逾期 2 天', type: '超期', level: 'high', overdue: '超期 2 天' },
+  { name: '郑一鸣', course: '少儿编程启蒙班', time: '今日 16:30', type: '首次跟进', level: 'mid', overdue: '公海领取后未跟进' },
+  { name: '冯雅琪', course: '成人学历提升 · 专升本', time: '明日 09:30', type: '阶段推进', level: 'low', overdue: '' },
+];
+document.getElementById('todoList').innerHTML = TODOS.map(t => `
+  <div class="todo-item" onclick="location.href='lead-detail.html'">
+    <span class="todo-level ${t.level}"></span>
+    <div class="todo-main">
+      <div class="todo-title">${t.name}</div>
+      <div class="lead-course">${t.course}</div>
+      <div class="todo-meta">
+        <span>${icon('clock', 12)} ${t.time}</span>
+        <span class="tag ${t.type === '超期' ? 'tag-danger' : t.type === '首次跟进' ? 'tag-purple' : 'tag-brand'}">${t.type}</span>
+      </div>
+    </div>
+    <span class="u-link" style="font-size:12.5px;white-space:nowrap">去跟进</span>
+  </div>`).join('');
+
+/* ============ 超期预警 ============ */
+const ALERTS = [
+  { name: '黄志远', desc: '线索 · 超 24h 未跟进', time: '2 天', level: 'high' },
+  { name: '吕子豪', desc: '商机 · 谈判中停留 9 天', time: '9 天', level: 'high' },
+  { name: '田思涵', desc: '线索 · 超 24h 未跟进', time: '1 天', level: 'high' },
+  { name: '徐嘉宁', desc: '商机 · 跟进中停留 5 天', time: '5 天', level: 'mid' },
+  { name: '马逸飞', desc: '线索 · 超 48h 未跟进', time: '3 天', level: 'mid' },
+  { name: '曹梦琪', desc: '商机 · 跟进中停留 4 天', time: '4 天', level: 'mid' },
+  { name: '邵天佑', desc: '线索 · 公海领取后未跟进', time: '1 天', level: 'low' },
+];
+document.getElementById('alertList').innerHTML = ALERTS.map(a => `
+  <div class="todo-item" onclick="toast('info','原型演示：跳转到「${a.name}」详情页')">
+    <span class="todo-level ${a.level}"></span>
+    <div class="todo-main">
+      <div class="todo-title">${a.name}</div>
+      <div class="todo-meta"><span>${a.desc}</span></div>
+    </div>
+    <span class="tag ${a.level === 'high' ? 'tag-danger' : 'tag-warning'}">${a.time}</span>
+  </div>`).join('');
+
+/* ============ 渠道 ROI ============ */
+const CHANNELS = [
+  { name: '抖音短视频', cost: 4.2,  roi: 8.6,  color: '#10b981' },
+  { name: '小红书',     cost: 3.1,  roi: 7.2,  color: '#10b981' },
+  { name: '朋友圈广告', cost: 5.8,  roi: 5.4,  color: '#3a63f0' },
+  { name: '朋友转介绍', cost: 0.6,  roi: 14.2, color: '#8b5cf6' },
+  { name: '知乎内容',   cost: 2.4,  roi: 3.1,  color: '#f59e0b' },
+  { name: '百度 SEM',   cost: 6.5,  roi: 2.6,  color: '#ef4444' },
+];
+const maxCost = Math.max(...CHANNELS.map(c => c.cost));
+document.getElementById('channelRoi').innerHTML = CHANNELS.map(c => `
+  <div class="channel-row">
+    <span class="channel-name">${c.name}</span>
+    <div class="mini-bar-track">
+      <div class="mini-bar" style="width:${(c.cost / maxCost) * 100}%;background:var(--ink-300)"></div>
+    </div>
+    <span class="channel-cost">${c.cost}万</span>
+    <span class="channel-roi" style="color:${c.color}">${c.roi}×</span>
+  </div>`).join('') +
+  `<div class="u-muted-sm u-mt-12">ROI = 归集成交金额 ÷ 投放成本，转客户时自动触发成本归集</div>`;
+
+/* ============ 赢单环形 ============ */
+donut(document.getElementById('winDonut'), 98, '赢单率 28.2%', '#10b981', 108);
+
+/* ============ 顶部交互 ============ */
+document.getElementById('timeRange').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-range]');
+  if (!btn) return;
+  e.currentTarget.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (btn.dataset.range === '自定义') {
+    openModal({
+      title: '自定义统计区间',
+      size: 'sm',
+      body: `<div class="form-grid">
+          <div class="field"><label class="field-label">开始日期</label><input type="date" class="input" value="2026-10-01"></div>
+          <div class="field"><label class="field-label">结束日期</label><input type="date" class="input" value="2026-10-10"></div>
+        </div>
+        <div class="alert alert-info u-mt-16">
+          <span class="alert-icon">${icon('info', 16)}</span>
+          <div>自定义区间最长支持 90 天；跨区间统计时，转化率以<b>状态跃迁时间</b>落在区间内为准。</div>
+        </div>`,
+      footer: `<button class="btn" data-modal-close>取消</button>
+               <button class="btn btn-primary" data-modal-close onclick="toast('success','统计区间已切换')">确定</button>`,
+    });
+  } else {
+    toast('info', `已切换统计区间：${btn.dataset.range}`);
+  }
+});
+document.getElementById('btnExport').addEventListener('click', () => {
+  toast('success', '看板报表生成中，完成后可在通知中心下载（已记录导出日志）');
+});
+</script>
+</body>
+</html>
